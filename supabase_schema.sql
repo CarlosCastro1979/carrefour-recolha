@@ -31,7 +31,18 @@ CREATE TABLE IF NOT EXISTS carrefour_recolha_itens (
   produto_id BIGINT NOT NULL REFERENCES carrefour_produtos(id),
   stock_fisico INT,
   stock_sistema INT,
-  preco NUMERIC
+  preco NUMERIC,
+  preco_de NUMERIC,
+  preco_por NUMERIC
+);
+
+CREATE TABLE IF NOT EXISTS carrefour_stock_sistema (
+  id BIGSERIAL PRIMARY KEY,
+  loja_codigo TEXT NOT NULL,
+  produto_id BIGINT NOT NULL REFERENCES carrefour_produtos(id),
+  stock_sistema INT,
+  importado_em TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (loja_codigo, produto_id)
 );
 
 CREATE TABLE IF NOT EXISTS carrefour_recolha_fotos (
@@ -46,24 +57,28 @@ CREATE INDEX IF NOT EXISTS idx_carrefour_recolhas_loja ON carrefour_recolhas(loj
 CREATE INDEX IF NOT EXISTS idx_carrefour_recolhas_data ON carrefour_recolhas(data_recolha DESC);
 CREATE INDEX IF NOT EXISTS idx_carrefour_itens_recolha ON carrefour_recolha_itens(recolha_id);
 CREATE INDEX IF NOT EXISTS idx_carrefour_fotos_recolha ON carrefour_recolha_fotos(recolha_id);
+CREATE INDEX IF NOT EXISTS idx_carrefour_stock_sistema_loja ON carrefour_stock_sistema(loja_codigo);
 
 ALTER TABLE carrefour_lojas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE carrefour_produtos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE carrefour_recolhas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE carrefour_recolha_itens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE carrefour_recolha_fotos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE carrefour_stock_sistema ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "anon_all carrefour_lojas" ON carrefour_lojas;
 DROP POLICY IF EXISTS "anon_all carrefour_produtos" ON carrefour_produtos;
 DROP POLICY IF EXISTS "anon_all carrefour_recolhas" ON carrefour_recolhas;
 DROP POLICY IF EXISTS "anon_all carrefour_recolha_itens" ON carrefour_recolha_itens;
 DROP POLICY IF EXISTS "anon_all carrefour_recolha_fotos" ON carrefour_recolha_fotos;
+DROP POLICY IF EXISTS "anon_all carrefour_stock_sistema" ON carrefour_stock_sistema;
 
 CREATE POLICY "anon_all carrefour_lojas" ON carrefour_lojas FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all carrefour_produtos" ON carrefour_produtos FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all carrefour_recolhas" ON carrefour_recolhas FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all carrefour_recolha_itens" ON carrefour_recolha_itens FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all carrefour_recolha_fotos" ON carrefour_recolha_fotos FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all carrefour_stock_sistema" ON carrefour_stock_sistema FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- Lojas
 INSERT INTO carrefour_lojas (codigo, nome) VALUES

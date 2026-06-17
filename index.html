@@ -27,6 +27,19 @@ header .sub{font-size:11px;color:var(--muted)}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
 .view{display:none;padding:16px var(--gutter);max-width:1100px;margin:0 auto}
 .view.active{display:block}
+.view-wide{max-width:1400px}
+.rpt-table{font-size:12px}
+.rpt-table th,.rpt-table td{padding:6px 8px;white-space:nowrap}
+.rpt-table .sticky-col{position:sticky;left:0;background:var(--surface);z-index:2;min-width:180px;box-shadow:2px 0 4px rgba(15,23,42,.04)}
+.cell-rut{background:#fff7ed;color:var(--warn);font-weight:700;text-align:center}
+.cell-ok{background:#ecfdf5;color:var(--ok);text-align:center}
+.cell-empty{background:#f8fafc;color:var(--muted);text-align:center}
+.hint-bar{font-size:12px;color:var(--muted);background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;background:#f8fafc;cursor:pointer;display:block}
+.upload-zone:hover{border-color:var(--carrefour);background:rgba(0,56,150,.04)}
+.upload-zone input{display:none}
+.prod-table .price-pair{display:flex;gap:4px}
+.prod-table .price-pair input{min-width:44px;font-size:12px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
 label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}
 input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:14px;margin-bottom:14px;outline:none}
@@ -115,6 +128,7 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
   <button class="tab" data-view="mobile">📱 Recolha</button>
   <button class="tab" data-view="dashboard">🖥️ Histórico</button>
   <button class="tab" data-view="relatorios">📊 Relatórios</button>
+  <button class="tab" data-view="sistema">⚙️ Sistema</button>
 </div>
 
 <div class="view active" id="view-home">
@@ -160,23 +174,46 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
   </div>
 </div>
 
-<div class="view" id="view-relatorios">
+<div class="view view-wide" id="view-relatorios">
   <div class="card">
-    <p style="font-weight:600;margin-bottom:8px">Exportar para Excel</p>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Usa a última recolha de cada loja. Rutura = stock na loja a zero.</p>
-    <div class="btn-row">
-      <button class="btn btn-outline" onclick="exportPorLoja()">⬇ Por loja</button>
-      <button class="btn btn-outline" onclick="exportPorReferencia()">⬇ Por referência / EAN</button>
-      <button class="btn btn-outline" onclick="exportRuturas()">⬇ Resumo ruturas</button>
+    <p style="font-weight:600;margin-bottom:8px">Resumos na tela</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Última visita por loja · rutura = stock físico a zero · evolução das visitas anteriores.</p>
+    <div class="btn-row" style="margin-bottom:0">
+      <button class="btn btn-outline" onclick="exportPorLoja()">⬇ Excel por loja</button>
+      <button class="btn btn-outline" onclick="exportPorReferencia()">⬇ Excel por referência</button>
+      <button class="btn btn-outline" onclick="exportRuturas()">⬇ Excel ruturas</button>
     </div>
   </div>
   <div class="card">
-    <p style="font-weight:600;margin-bottom:10px">Indicadores — última visita por loja</p>
+    <p style="font-weight:600;margin-bottom:10px">% ruturas — última visita por loja</p>
     <div class="kpi-grid" id="kpi-ruturas"><p style="color:var(--muted);font-size:13px">A carregar...</p></div>
   </div>
+  <div class="card">
+    <p style="font-weight:600;margin-bottom:8px">Matriz de stock físico (última visita)</p>
+    <div class="prod-table-wrap" id="matriz-stock"><p style="color:var(--muted);font-size:13px">A carregar...</p></div>
+  </div>
+  <div class="card">
+    <p style="font-weight:600;margin-bottom:8px">Evolução por loja (visitas recentes)</p>
+    <div id="evo-lojas"><p style="color:var(--muted);font-size:13px">A carregar...</p></div>
+  </div>
   <div class="card" id="ruptura-ref-box">
-    <p style="font-weight:600;margin-bottom:8px">Referências em rutura (stock 0)</p>
+    <p style="font-weight:600;margin-bottom:8px">Referências em rutura — em que lojas</p>
     <div id="ruptura-ref-list" style="font-size:13px;color:var(--muted)">A carregar...</div>
+  </div>
+</div>
+
+<div class="view" id="view-sistema">
+  <div class="card">
+    <p style="font-weight:600;margin-bottom:8px">Stock do sistema (portal Carrefour)</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Carrega o Excel exportado do portal. Os stocks do sistema serão preenchidos automaticamente na recolha por loja. O formato exacto será configurado quando tiveres o ficheiro de exemplo.</p>
+    <label class="upload-zone">📂 Selecionar Excel (.xlsx)<input type="file" accept=".xlsx,.xls" id="sys-excel" onchange="importarStockSistema(this)"></label>
+    <p id="sys-status" style="font-size:13px;color:var(--muted);margin-top:12px">Nenhum ficheiro carregado.</p>
+    <div id="sys-preview" style="margin-top:12px;font-size:12px"></div>
+  </div>
+  <div class="card">
+    <p style="font-weight:600;margin-bottom:8px">Stock sistema actual</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Dados importados por loja — usados para preencher a coluna «Stock no sistema» na recolha.</p>
+    <div class="prod-table-wrap" id="sys-grid"><p style="color:var(--muted);font-size:13px">Sem dados importados.</p></div>
   </div>
 </div>
 
@@ -226,7 +263,22 @@ const CATALOG=[
 ];
 const CAT_ORDER=['Café Caps 10Un','Café moído'];
 
-let lojas=[], produtos=[], entradas={}, fotosPendentes=[], mobileStepN=1, recolhedor='', selectedRecolhaId=null, reportCache=null;
+let lojas=[], produtos=[], entradas={}, fotosPendentes=[], mobileStepN=1, recolhedor='', selectedRecolhaId=null, reportCache=null, precosHint='';
+
+function emptyEntrada(){return{sf:'',ss:'',pd:'',pp:''};}
+function parsePreco(v){if(v===''||v==null)return null;const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n;}
+function precoStr(v){return v!=null&&!isNaN(v)?String(v).replace('.',','):'';}
+function fmtPrecoPair(de,por,leg){
+  const p=por??leg,d=de;
+  if(d!=null&&p!=null)return `De ${fmtPreco(d)} · Por ${fmtPreco(p)}`;
+  if(p!=null)return fmtPreco(p);
+  if(d!=null)return `De ${fmtPreco(d)}`;
+  return '—';
+}
+function stockCellClass(sf){
+  if(sf==null||sf==='')return'cell-empty';
+  return isRuptura(sf)?'cell-rut':'cell-ok';
+}
 
 function prodCell(p){
   if(!p) return '—';
@@ -249,8 +301,45 @@ function limparNotas(){
 }
 function resetEntradas(){
   entradas={};
-  produtos.forEach(p=>{entradas[p.id]={sf:'',ss:'',p:''};});
+  produtos.forEach(p=>{entradas[p.id]=emptyEntrada();});
+  precosHint='';
   renderProdutos();
+}
+async function resetEntradasComPrecos(lojaCodigo){
+  entradas={};
+  produtos.forEach(p=>{entradas[p.id]=emptyEntrada();});
+  precosHint='';
+  await preencherPrecosUltimaVisita(lojaCodigo);
+  await preencherStockSistema(lojaCodigo);
+  renderProdutos();
+}
+async function preencherPrecosUltimaVisita(lojaCodigo){
+  try{
+    const recs=await apiGet('carrefour_recolhas?loja_codigo=eq.'+lojaCodigo+'&select=id,data_recolha&order=data_recolha.desc&limit=1');
+    if(!recs.length)return;
+    const itens=await apiGet('carrefour_recolha_itens?recolha_id=eq.'+recs[0].id+'&select=produto_id,preco_de,preco_por,preco');
+    let n=0;
+    itens.forEach(it=>{
+      if(!entradas[it.produto_id])return;
+      const e=entradas[it.produto_id];
+      if(it.preco_de!=null){e.pd=precoStr(it.preco_de);n++;}
+      if(it.preco_por!=null){e.pp=precoStr(it.preco_por);n++;}
+      else if(it.preco!=null){e.pp=precoStr(it.preco);n++;}
+    });
+    if(n)precosHint='Preços da visita de '+new Date(recs[0].data_recolha).toLocaleDateString('pt-PT')+' — actualiza se houver promoção.';
+  }catch(e){}
+}
+async function preencherStockSistema(lojaCodigo){
+  try{
+    const rows=await apiGet('carrefour_stock_sistema?loja_codigo=eq.'+lojaCodigo+'&select=produto_id,stock_sistema');
+    rows.forEach(r=>{if(entradas[r.produto_id]&&r.stock_sistema!=null)entradas[r.produto_id].ss=String(r.stock_sistema);});
+  }catch(e){}
+}
+function validarStockFisico(){
+  const vazios=produtos.filter(p=>entradas[p.id]?.sf==='');
+  if(!vazios.length)return true;
+  alert('Preenche o stock na loja de todos os produtos ('+vazios.length+' em falta).\n\nSe não houver stock, coloca 0.');
+  return false;
 }
 
 document.getElementById('login-nome').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
@@ -313,11 +402,16 @@ function showView(id){
   document.body.classList.toggle('has-bar',id==='mobile'&&mobileStepN>=2);
   if(id==='dashboard') loadRecolhas();
   if(id==='relatorios') loadRelatorios();
+  if(id==='sistema') loadSistemaGrid();
 }
 
-function mobileStep(n){
+async function mobileStep(n){
   if(n===2&&!document.getElementById('f-loja').value){alert('Seleciona a loja.');return;}
-  if(n===2&&mobileStepN===1){limparFotos();limparNotas();resetEntradas();}
+  if(n===3&&!validarStockFisico())return;
+  if(n===2&&mobileStepN===1){
+    limparFotos();limparNotas();
+    await resetEntradasComPrecos(document.getElementById('f-loja').value);
+  }
   mobileStepN=n;
   [1,2,3].forEach(i=>document.getElementById('m-step'+i).style.display=i===n?'block':'none');
   document.querySelectorAll('#m-steps .step').forEach(s=>s.classList.toggle('on',+s.dataset.s===n));
@@ -327,9 +421,9 @@ function mobileStep(n){
 }
 
 function updateResumo(){
-  const n=Object.values(entradas).filter(e=>e.sf!==''||e.ss!==''||e.p).length;
+  const n=produtos.filter(p=>entradas[p.id]?.sf!=='').length;
   const loja=lojas.find(l=>l.codigo===document.getElementById('f-loja').value);
-  document.getElementById('m-resumo').innerHTML=`<strong>${n}</strong> produtos · <strong>${fotosPendentes.length}</strong> fotos<br>Loja: <strong>${loja?.nome||'—'}</strong> · ${recolhedor}`;
+  document.getElementById('m-resumo').innerHTML=`<strong>${n}/${produtos.length}</strong> stocks · <strong>${fotosPendentes.length}</strong> fotos<br>Loja: <strong>${loja?.nome||'—'}</strong> · ${recolhedor}`;
 }
 
 async function init(){
@@ -354,7 +448,7 @@ async function init(){
     sel.innerHTML+=`<option value="${l.codigo}">${l.nome} (${l.codigo})</option>`;
     fil.innerHTML+=`<option value="${l.codigo}">${l.nome}</option>`;
   });
-  produtos.forEach(p=>{entradas[p.id]={sf:'',ss:'',p:''};});
+  produtos.forEach(p=>{entradas[p.id]=emptyEntrada();});
   renderProdutos();
 }
 
@@ -369,17 +463,20 @@ function renderProdutos(){
     if(ib>=0) return 1;
     return a.localeCompare(b);
   });
-  let html='<p style="font-size:12px;color:var(--muted);margin-bottom:8px">Desliza a lista — <strong>'+produtos.length+'</strong> produtos ('+cats.map(c=>byCat[c].length+' '+c).join(' · ')+')</p>';
-  html+='<table class="prod-table"><thead><tr><th>Produto</th><th class="num">Stock na loja</th><th class="num">Stock no sistema</th><th class="num">Preço R$</th></tr></thead><tbody>';
+  let html='';
+  if(precosHint)html+=`<p class="hint-bar">${precosHint}</p>`;
+  html+='<p style="font-size:12px;color:var(--muted);margin-bottom:8px"><strong>Obrigatório:</strong> stock na loja em todos os produtos (0 se rutura). Preços «De» / «Por» da última visita — actualiza se necessário.</p>';
+  html+='<table class="prod-table"><thead><tr><th>Produto</th><th class="num">Stock na loja *</th><th class="num">Stock no sistema</th><th class="num">De R$</th><th class="num">Por R$</th></tr></thead><tbody>';
   cats.forEach(cat=>{
     const items=byCat[cat];
-    html+=`<tr class="cat-row"><td colspan="4">${cat} (${items.length})</td></tr>`;
+    html+=`<tr class="cat-row"><td colspan="5">${cat} (${items.length})</td></tr>`;
     items.forEach(p=>{
-      const e=entradas[p.id]||{sf:'',ss:'',p:''};
+      const e=entradas[p.id]||emptyEntrada();
       html+=`<tr><td>${prodCell(p)}</td>
-        <td><input type="number" min="0" inputmode="numeric" placeholder="—" value="${e.sf}" data-p="${p.id}" data-f="sf" oninput="setEntrada(this)"></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder="0" value="${e.sf}" data-p="${p.id}" data-f="sf" oninput="setEntrada(this)" required></td>
         <td><input type="number" min="0" inputmode="numeric" placeholder="—" value="${e.ss}" data-p="${p.id}" data-f="ss" oninput="setEntrada(this)"></td>
-        <td><input inputmode="decimal" placeholder="0,00" value="${e.p}" data-p="${p.id}" data-f="p" oninput="setEntrada(this)"></td></tr>`;
+        <td><input inputmode="decimal" placeholder="—" value="${e.pd}" data-p="${p.id}" data-f="pd" oninput="setEntrada(this)"></td>
+        <td><input inputmode="decimal" placeholder="—" value="${e.pp}" data-p="${p.id}" data-f="pp" oninput="setEntrada(this)"></td></tr>`;
     });
   });
   html+='</tbody></table>';
@@ -395,20 +492,26 @@ function renderThumbs(){
 }
 
 async function guardarRecolha(){
+  if(!validarStockFisico())return;
   const btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='A guardar...';
   try{
     const loja=document.getElementById('f-loja').value;
     const data=document.getElementById('f-data').value;
     const notas=document.getElementById('f-notas').value.trim();
     const [rec]=await apiPost('carrefour_recolhas',{loja_codigo:loja,recolhedor,data_recolha:new Date(data).toISOString(),notas:notas||null});
-    const itens=Object.entries(entradas).filter(([,e])=>e.sf!==''||e.ss!==''||e.p).map(([pid,e])=>({
-      recolha_id:rec.id,produto_id:+pid,
-      stock_fisico:e.sf!==''&&e.sf!=null?+e.sf:null,
-      stock_sistema:e.ss!==''&&e.ss!=null?+e.ss:null,
-      preco:e.p?parseFloat(String(e.p).replace(',','.')):null
-    }));
-    if(itens.length) await apiPost('carrefour_recolha_itens',itens);
+    const itens=produtos.map(p=>{
+      const e=entradas[p.id];
+      return{
+        recolha_id:rec.id,produto_id:p.id,
+        stock_fisico:+e.sf,
+        stock_sistema:e.ss!==''?+e.ss:null,
+        preco_de:parsePreco(e.pd),
+        preco_por:parsePreco(e.pp)
+      };
+    });
+    await apiPost('carrefour_recolha_itens',itens);
     for(const foto of fotosPendentes) await apiPost('carrefour_recolha_fotos',{recolha_id:rec.id,foto_data:foto});
+    reportCache=null;
     limparFotos();
     limparNotas();
     resetEntradas();
@@ -465,14 +568,14 @@ async function showDetail(id){
     html+=`<div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px"><strong style="display:block;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Observações</strong>${escHtml(rec.notas).replace(/\n/g,'<br>')}</div>`;
   }
   if(fotos.length){html+=`<p style="font-weight:600;margin-bottom:8px">📷 Fotos (${fotos.length})</p><div class="thumbs" style="margin-bottom:16px">`+fotos.map(f=>`<img src="${f.foto_data}" style="cursor:pointer" onclick="openModal(this.src)">`).join('')+'</div>';}
-  html+='<table class="prod-table"><thead><tr><th>Produto</th><th class="num">Stock na loja</th><th class="num">Stock no sistema</th><th class="num">Dif.</th><th class="num">Preço R$</th></tr></thead><tbody>';
+  html+='<table class="prod-table"><thead><tr><th>Produto</th><th class="num">Stock na loja</th><th class="num">Stock no sistema</th><th class="num">Dif.</th><th class="num">De R$</th><th class="num">Por R$</th></tr></thead><tbody>';
   itens.sort((a,b)=>(a.carrefour_produtos?.categoria||'').localeCompare(b.carrefour_produtos?.categoria||'')||a.carrefour_produtos?.posicao-b.carrefour_produtos?.posicao);
   let lastCat='';
   itens.forEach(it=>{
     const cat=it.carrefour_produtos?.categoria||'Outros';
-    if(cat!==lastCat){html+=`<tr class="cat-row"><td colspan="5">${cat}</td></tr>`;lastCat=cat;}
+    if(cat!==lastCat){html+=`<tr class="cat-row"><td colspan="6">${cat}</td></tr>`;lastCat=cat;}
     const sf=it.stock_fisico,ss=it.stock_sistema,dif=(sf!=null&&ss!=null)?sf-ss:null;
-    html+=`<tr><td>${prodCellFromIt(it)}</td><td class="num ${isRuptura(sf)?'diff-warn':''}">${sf??'—'}</td><td class="num">${ss??'—'}</td><td class="num ${dif!=null&&dif!==0?(dif<0?'diff-warn':'diff-ok'):''}">${dif!=null?(dif>0?'+'+dif:dif):'—'}</td><td class="num">${fmtPreco(it.preco)||'—'}</td></tr>`;
+    html+=`<tr><td>${prodCellFromIt(it)}</td><td class="num ${isRuptura(sf)?'diff-warn':''}">${sf??'—'}</td><td class="num">${ss??'—'}</td><td class="num ${dif!=null&&dif!==0?(dif<0?'diff-warn':'diff-ok'):''}">${dif!=null?(dif>0?'+'+dif:dif):'—'}</td><td class="num">${fmtPreco(it.preco_de)||'—'}</td><td class="num">${fmtPreco(it.preco_por??it.preco)||'—'}</td></tr>`;
   });
   html+='</tbody></table>';
   document.getElementById('d-detail').innerHTML=html;
@@ -489,34 +592,85 @@ async function eliminarRecolha(id){
   }catch(e){alert('Erro: '+e.message);}
 }
 
-async function buildReportCache(){
-  if(reportCache) return reportCache;
+async function buildReportCache(force){
+  if(reportCache&&!force) return reportCache;
   const recolhas=await apiGet('carrefour_recolhas?select=*&order=data_recolha.desc&limit=500');
-  const latest={};
-  recolhas.forEach(r=>{if(!latest[r.loja_codigo]) latest[r.loja_codigo]=r;});
-  const ids=Object.values(latest).map(r=>r.id);
-  if(!ids.length){reportCache={latest:{},itensByRec:{},lojas:lojas};return reportCache;}
-  const itens=await apiGet('carrefour_recolha_itens?recolha_id=in.('+ids.join(',')+')&select=*,carrefour_produtos(material,nome,ean,categoria,posicao)');
+  const latest={}, byLoja={};
+  recolhas.forEach(r=>{
+    if(!latest[r.loja_codigo]) latest[r.loja_codigo]=r;
+    (byLoja[r.loja_codigo]=byLoja[r.loja_codigo]||[]).push(r);
+  });
+  Object.keys(byLoja).forEach(c=>byLoja[c].sort((a,b)=>new Date(b.data_recolha)-new Date(a.data_recolha)));
+  const allIds=[...new Set(recolhas.map(r=>r.id))];
+  if(!allIds.length){reportCache={latest:{},byLoja:{},itensByRec:{},lojas};return reportCache;}
+  const itens=await apiGet('carrefour_recolha_itens?recolha_id=in.('+allIds.join(',')+')&select=*,carrefour_produtos(material,nome,ean,categoria,posicao)');
   const itensByRec={};
   itens.forEach(it=>{(itensByRec[it.recolha_id]=itensByRec[it.recolha_id]||[]).push(it);});
-  reportCache={latest,itensByRec,lojas};
+  reportCache={latest,byLoja,itensByRec,lojas};
   return reportCache;
+}
+
+function visitStats(recId,itensByRec){
+  const items=itensByRec[recId]||[];
+  const com=items.filter(it=>it.stock_fisico!=null);
+  const rut=com.filter(it=>isRuptura(it.stock_fisico)).length;
+  const total=com.reduce((s,it)=>s+(+it.stock_fisico||0),0);
+  return{com:com.length,rut,pct:com.length?rut/com.length:0,total};
+}
+
+function renderMatrizStock(latest,itensByRec){
+  const codes=lojas.map(l=>l.codigo);
+  let h='<table class="prod-table rpt-table"><thead><tr><th class="sticky-col">Produto</th>';
+  codes.forEach(c=>{h+=`<th class="num">${c}</th>`;});
+  h+='</tr></thead><tbody>';
+  produtos.forEach(p=>{
+    h+=`<tr><td class="sticky-col" style="font-size:11px"><strong>${p.material}</strong> · ${p.nome}</td>`;
+    codes.forEach(c=>{
+      const rec=latest[c];
+      let sf='—',cls='cell-empty';
+      if(rec){
+        const it=(itensByRec[rec.id]||[]).find(x=>x.produto_id===p.id);
+        if(it&&it.stock_fisico!=null){sf=it.stock_fisico;cls=stockCellClass(sf);}
+      }
+      h+=`<td class="${cls}">${sf}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  document.getElementById('matriz-stock').innerHTML=h;
+}
+
+function renderEvolucaoLojas(byLoja,itensByRec){
+  let h='';
+  lojas.forEach(l=>{
+    const visits=(byLoja[l.codigo]||[]).slice(0,6);
+    if(!visits.length){h+=`<p style="font-size:12px;color:var(--muted);margin-bottom:12px"><strong>${l.codigo}</strong> — sem visitas</p>`;return;}
+    h+=`<p style="font-weight:600;margin:14px 0 6px">${l.nome} (${l.codigo})</p>`;
+    h+='<table class="prod-table rpt-table" style="margin-bottom:8px"><thead><tr><th>Data</th><th>Recolhedor</th><th class="num">Stock total</th><th class="num">Ruturas</th><th class="num">% Ruturas</th></tr></thead><tbody>';
+    visits.forEach(rec=>{
+      const st=visitStats(rec.id,itensByRec);
+      h+=`<tr><td>${new Date(rec.data_recolha).toLocaleString('pt-PT')}</td><td>${rec.recolhedor}</td><td class="num">${st.total}</td><td class="num ${st.rut?'diff-warn':''}">${st.rut}</td><td class="num">${st.com?fmtPct(st.pct):'—'}</td></tr>`;
+    });
+    h+='</tbody></table>';
+  });
+  document.getElementById('evo-lojas').innerHTML=h||'<p style="color:var(--muted)">Sem visitas registadas.</p>';
 }
 
 async function loadRelatorios(){
   try{
-    const {latest,itensByRec}=await buildReportCache();
+    reportCache=null;
+    const {latest,itensByRec,byLoja}=await buildReportCache(true);
     const kpi=document.getElementById('kpi-ruturas');
     const codes=lojas.map(l=>l.codigo);
     if(!codes.length){kpi.innerHTML='<p style="color:var(--muted)">Sem dados</p>';return;}
     kpi.innerHTML=codes.map(c=>{
       const rec=latest[c];
       if(!rec) return `<div class="kpi"><strong>—</strong><span>${c}</span></div>`;
-      const items=itensByRec[rec.id]||[];
-      const com=items.filter(it=>it.stock_fisico!=null);
-      const rut=com.filter(it=>isRuptura(it.stock_fisico)).length;
-      return `<div class="kpi"><strong>${com.length?fmtPct(rut/com.length):'—'}</strong><span>${c} ruturas</span></div>`;
+      const st=visitStats(rec.id,itensByRec);
+      return `<div class="kpi"><strong>${st.com?fmtPct(st.pct):'—'}</strong><span>${c} · ${st.rut} ruturas</span></div>`;
     }).join('');
+    renderMatrizStock(latest,itensByRec);
+    renderEvolucaoLojas(byLoja,itensByRec);
     const refMap={};
     produtos.forEach(p=>{
       const lojasRut=[];
@@ -538,23 +692,23 @@ async function exportVisita(id){
   const [rec]=await apiGet('carrefour_recolhas?id=eq.'+id);
   const itens=await apiGet('carrefour_recolha_itens?recolha_id=eq.'+id+'&select=*,carrefour_produtos(material,nome,ean,categoria)');
   const loja=lojas.find(l=>l.codigo===rec.loja_codigo);
-  const rows=[['Loja',loja?.nome||rec.loja_codigo],['Código',rec.loja_codigo],['Data',new Date(rec.data_recolha).toLocaleString('pt-PT')],['Recolhedor',rec.recolhedor],['Observações',rec.notas||''],[],['Material','Produto','EAN','Categoria','Stock na loja','Stock no sistema','Diferença','Preço R$','Rutura']];
+  const rows=[['Loja',loja?.nome||rec.loja_codigo],['Código',rec.loja_codigo],['Data',new Date(rec.data_recolha).toLocaleString('pt-PT')],['Recolhedor',rec.recolhedor],['Observações',rec.notas||''],[],['Material','Produto','EAN','Categoria','Stock na loja','Stock no sistema','Diferença','De R$','Por R$','Rutura']];
   itens.forEach(it=>{
     const p=it.carrefour_produtos||{};
     const sf=it.stock_fisico,ss=it.stock_sistema;
-    rows.push([p.material,p.nome,p.ean,p.categoria,sf??'',ss??'',(sf!=null&&ss!=null)?sf-ss:'',it.preco??'',isRuptura(sf)?'Sim':'Não']);
+    rows.push([p.material,p.nome,p.ean,p.categoria,sf??'',ss??'',(sf!=null&&ss!=null)?sf-ss:'',it.preco_de??'',it.preco_por??it.preco??'',isRuptura(sf)?'Sim':'Não']);
   });
   downloadExcel(`carrefour-${rec.loja_codigo}-${rec.id}.xlsx`,rows,'Visita');
 }
 
 async function exportPorLoja(){
   const {latest,itensByRec}=await buildReportCache();
-  const rows=[['Loja','Código','Data','Recolhedor','Observações','Material','Produto','EAN','Stock na loja','Stock no sistema','Preço R$','Rutura']];
+  const rows=[['Loja','Código','Data','Recolhedor','Observações','Material','Produto','EAN','Stock na loja','Stock no sistema','De R$','Por R$','Rutura']];
   Object.values(latest).forEach(rec=>{
     const loja=lojas.find(l=>l.codigo===rec.loja_codigo);
     (itensByRec[rec.id]||[]).forEach(it=>{
       const p=it.carrefour_produtos||{};
-      rows.push([loja?.nome||rec.loja_codigo,rec.loja_codigo,new Date(rec.data_recolha).toLocaleString('pt-PT'),rec.recolhedor,rec.notas||'',p.material,p.nome,p.ean,it.stock_fisico??'',it.stock_sistema??'',it.preco??'',isRuptura(it.stock_fisico)?'Sim':'Não']);
+      rows.push([loja?.nome||rec.loja_codigo,rec.loja_codigo,new Date(rec.data_recolha).toLocaleString('pt-PT'),rec.recolhedor,rec.notas||'',p.material,p.nome,p.ean,it.stock_fisico??'',it.stock_sistema??'',it.preco_de??'',it.preco_por??it.preco??'',isRuptura(it.stock_fisico)?'Sim':'Não']);
     });
   });
   downloadExcel('carrefour-por-loja.xlsx',rows,'Por loja');
@@ -595,6 +749,56 @@ async function exportRuturas(){
     rows.push([l.nome,l.codigo,new Date(rec.data_recolha).toLocaleString('pt-PT'),rec.notas||'',com.length,rut,com.length?fmtPct(rut/com.length):'']);
   });
   downloadExcel('carrefour-ruturas-por-loja.xlsx',rows,'Ruturas');
+}
+
+async function apiUpsertStock(rows){
+  const r=await fetch(SUPA_URL+'/rest/v1/carrefour_stock_sistema?on_conflict=loja_codigo,produto_id',{
+    method:'POST',
+    headers:{...HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify(rows)
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+
+async function loadSistemaGrid(){
+  const el=document.getElementById('sys-grid');
+  try{
+    const rows=await apiGet('carrefour_stock_sistema?select=loja_codigo,produto_id,stock_sistema,importado_em&order=loja_codigo');
+    if(!rows.length){el.innerHTML='<p style="color:var(--muted);font-size:13px">Sem dados importados. Carrega o Excel do portal.</p>';return;}
+    const byLoja={};
+    rows.forEach(r=>{(byLoja[r.loja_codigo]=byLoja[r.loja_codigo]||{})[r.produto_id]=r.stock_sistema;});
+    const codes=lojas.map(l=>l.codigo);
+    let h='<table class="prod-table rpt-table"><thead><tr><th class="sticky-col">Produto</th>';
+    codes.forEach(c=>{h+=`<th class="num">${c}</th>`;});
+    h+='</tr></thead><tbody>';
+    produtos.forEach(p=>{
+      h+=`<tr><td class="sticky-col" style="font-size:11px"><strong>${p.material}</strong></td>`;
+      codes.forEach(c=>{const v=byLoja[c]?.[p.id];h+=`<td class="num">${v!=null?v:'—'}</td>`;});
+      h+='</tr>';
+    });
+    h+='</tbody></table>';
+    el.innerHTML=h;
+    const last=rows.reduce((a,r)=>!a||new Date(r.importado_em)>new Date(a)?r.importado_em:a,null);
+    if(last) document.getElementById('sys-status').textContent='Última importação: '+new Date(last).toLocaleString('pt-PT')+' · '+rows.length+' registos';
+  }catch(e){
+    el.innerHTML='<p style="color:var(--warn);font-size:13px">Tabela carrefour_stock_sistema não encontrada. Executa supabase_migration_v2.sql no Supabase.</p>';
+  }
+}
+
+async function importarStockSistema(inp){
+  const file=inp.files[0]; if(!file) return;
+  const st=document.getElementById('sys-status');
+  st.textContent='A ler '+file.name+'...';
+  try{
+    const wb=XLSX.read(await file.arrayBuffer());
+    const sheet=wb.Sheets[wb.SheetNames[0]];
+    const data=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+    document.getElementById('sys-preview').innerHTML='<p style="color:var(--muted)">Ficheiro: <strong>'+escHtml(file.name)+'</strong> · '+data.length+' linhas · folha «'+escHtml(wb.SheetNames[0])+'»</p><p style="margin-top:8px;color:var(--warn)">Formato do portal ainda não configurado — envia-me o Excel de exemplo para activar a importação automática por loja.</p>';
+    st.textContent='Ficheiro recebido — aguarda configuração do formato.';
+  }catch(e){
+    st.textContent='Erro ao ler ficheiro: '+e.message;
+  }
+  inp.value='';
 }
 
 function openModal(src){document.getElementById('modal-img').src=src;document.getElementById('modal').classList.add('open');}
