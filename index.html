@@ -162,7 +162,7 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 
 <div class="view" id="view-relatorios">
   <div class="card">
-    <p style="font-weight:600;margin-bottom:8px">Exportar para Excel (CSV)</p>
+    <p style="font-weight:600;margin-bottom:8px">Exportar para Excel</p>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Usa a última recolha de cada loja. Rutura = stock na loja a zero.</p>
     <div class="btn-row">
       <button class="btn btn-outline" onclick="exportPorLoja()">⬇ Por loja</button>
@@ -204,6 +204,7 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 </div>
 <div class="modal-bg" id="modal" onclick="this.classList.remove('open')"><img id="modal-img" alt="" onclick="event.stopPropagation()"></div>
 
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 const SUPA_URL='https://qnscwppgljobelplgbkp.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuc2N3cHBnbGpvYmVscGxnYmtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMDc3NzgsImV4cCI6MjA5MTY4Mzc3OH0.9ysq0ibsn3qDPHe5WYF-yyq9-vEKjc_hIn9BNKZccYY';
@@ -271,12 +272,13 @@ async function apiGet(p){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{headers:HDR
 async function apiPost(p,b){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{method:'POST',headers:{...HDR,'Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function apiDelete(p){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{method:'DELETE',headers:HDR});if(!r.ok)throw new Error(await r.text());}
 
-function downloadCsv(name,rows){
-  const csv='\uFEFF'+rows.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download=name;
-  a.click();
+function downloadExcel(filename,rows,sheetName='Dados'){
+  if(typeof XLSX==='undefined'){alert('Exportador Excel indisponível. Verifica a ligação à internet e recarrega a página.');return;}
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,(sheetName||'Dados').slice(0,31));
+  const name=filename.endsWith('.xlsx')?filename:filename.replace(/\.(csv|xlsx)$/i,'')+'.xlsx';
+  XLSX.writeFile(wb,name);
 }
 function isRuptura(sf){return sf===0||sf==='0'}
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
@@ -542,7 +544,7 @@ async function exportVisita(id){
     const sf=it.stock_fisico,ss=it.stock_sistema;
     rows.push([p.material,p.nome,p.ean,p.categoria,sf??'',ss??'',(sf!=null&&ss!=null)?sf-ss:'',it.preco??'',isRuptura(sf)?'Sim':'Não']);
   });
-  downloadCsv(`carrefour-${rec.loja_codigo}-${rec.id}.csv`,rows);
+  downloadExcel(`carrefour-${rec.loja_codigo}-${rec.id}.xlsx`,rows,'Visita');
 }
 
 async function exportPorLoja(){
@@ -555,7 +557,7 @@ async function exportPorLoja(){
       rows.push([loja?.nome||rec.loja_codigo,rec.loja_codigo,new Date(rec.data_recolha).toLocaleString('pt-PT'),rec.recolhedor,rec.notas||'',p.material,p.nome,p.ean,it.stock_fisico??'',it.stock_sistema??'',it.preco??'',isRuptura(it.stock_fisico)?'Sim':'Não']);
     });
   });
-  downloadCsv('carrefour-por-loja.csv',rows);
+  downloadExcel('carrefour-por-loja.xlsx',rows,'Por loja');
 }
 
 async function exportPorReferencia(){
@@ -578,7 +580,7 @@ async function exportPorReferencia(){
     });
     rows.push([p.material,p.nome,p.ean,p.categoria,lojasRut.join(' '),lojasRut.length,...codes.map(c=>lojaStocks[c])]);
   });
-  downloadCsv('carrefour-por-referencia.csv',rows);
+  downloadExcel('carrefour-por-referencia.xlsx',rows,'Por referência');
 }
 
 async function exportRuturas(){
@@ -592,7 +594,7 @@ async function exportRuturas(){
     const rut=com.filter(it=>isRuptura(it.stock_fisico)).length;
     rows.push([l.nome,l.codigo,new Date(rec.data_recolha).toLocaleString('pt-PT'),rec.notas||'',com.length,rut,com.length?fmtPct(rut/com.length):'']);
   });
-  downloadCsv('carrefour-ruturas-por-loja.csv',rows);
+  downloadExcel('carrefour-ruturas-por-loja.xlsx',rows,'Ruturas');
 }
 
 function openModal(src){document.getElementById('modal-img').src=src;document.getElementById('modal').classList.add('open');}
