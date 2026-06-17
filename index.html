@@ -39,13 +39,17 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .steps{display:flex;gap:6px;margin-bottom:14px}
 .step{flex:1;text-align:center;font-size:10px;padding:8px 4px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-weight:600}
 .step.on{background:var(--accent);color:#fff}
-.cat-hdr{display:flex;justify-content:space-between;align-items:center;padding:12px 0;cursor:pointer;font-weight:600;border-bottom:1px solid var(--border)}
-.cat-body{display:none}.cat-body.open{display:block}
-.prod{margin:10px 0;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)}
-.prod-name{font-size:13px;font-weight:600}.prod-meta{font-size:10px;color:var(--muted);margin:4px 0 8px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-.grid3 input{text-align:center;margin:0;font-size:13px;padding:8px 4px}
-.grid3-hdr{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.step-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.btn-back{background:none;border:none;color:var(--accent);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;padding:6px 0;display:inline-flex;align-items:center;gap:4px}
+.btn-back:hover{text-decoration:underline}
+.prod-table{width:100%;border-collapse:collapse;font-size:13px}
+.prod-table th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-bottom:2px solid var(--border);background:#f8fafc;white-space:nowrap}
+.prod-table td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.prod-table .cat-row td{background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px}
+.prod-name{font-size:12px;font-weight:600;line-height:1.3}
+.prod-meta{font-size:10px;color:var(--muted);margin-top:2px}
+.prod-table input{width:100%;min-width:52px;padding:8px 4px;border:1px solid var(--border);border-radius:6px;text-align:center;font-size:14px;margin:0}
+.prod-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .photo-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px;text-align:center;background:#f8fafc;cursor:pointer;display:block}
 .photo-zone:hover{border-color:var(--accent);background:var(--accent-soft)}
 .photo-zone input{display:none}
@@ -79,18 +83,9 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 <div id="login-screen">
   <div class="login-card">
     <div style="font-size:40px;margin-bottom:8px">🏪</div>
-    <h2>Quem és tu?</h2>
-    <p>Seleciona o teu nome para continuar a recolha Carrefour.</p>
-    <select id="login-select">
-      <option value="">— Selecionar —</option>
-      <option>Carlos Castro</option>
-      <option>Hélcio Grégio</option>
-      <option>Paulo Fontes</option>
-      <option>Daniela Santos</option>
-      <option>Filipe Neves</option>
-      <option>Outro (escrever abaixo)</option>
-    </select>
-    <input type="text" id="login-outro" placeholder="O teu nome" style="display:none">
+    <h2>Identificação</h2>
+    <p>Escreve o teu nome — fica registado em cada recolha.</p>
+    <input type="text" id="login-nome" placeholder="O teu nome" autocomplete="name" maxlength="80">
     <button class="btn btn-primary" style="margin-top:4px" onclick="doLogin()">Entrar</button>
     <p class="pwa-hint">📱 Adiciona ao ecrã inicial para uso em loja</p>
   </div>
@@ -111,7 +106,7 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 </div>
 
 <div class="view active" id="view-home">
-  <p style="color:var(--muted);margin-bottom:12px">Stock físico, stock de sistema, preços e fotos dos lineares — 10 lojas.</p>
+  <p style="color:var(--muted);margin-bottom:12px">Stock na loja, stock no sistema, preços (R$) e fotos dos lineares — 10 lojas.</p>
   <div class="home-grid">
     <a class="home-card" href="#" onclick="goTab('mobile');return false"><strong>📱 Recolha na loja</strong><span style="color:var(--muted);font-size:13px">Mobile — preencher stocks e fotos</span></a>
     <a class="home-card" href="#" onclick="goTab('dashboard');return false"><strong>🖥️ Histórico</strong><span style="color:var(--muted);font-size:13px">Comparar stocks e ver fotos</span></a>
@@ -125,16 +120,22 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
     <div class="step" data-s="3">3. Fotos</div>
   </div>
   <div id="m-step1"><div class="card">
+    <div class="step-nav"><button type="button" class="btn-back" onclick="goTab('home')">← Início</button></div>
     <label>Loja Carrefour</label><select id="f-loja"></select>
     <label>Data e hora da recolha</label><input type="datetime-local" id="f-data">
     <button class="btn btn-primary" onclick="mobileStep(2)">Continuar →</button>
   </div></div>
   <div id="m-step2" style="display:none">
-    <div class="grid3-hdr"><span>Stock físico</span><span>Stock sistema</span><span>Preço €</span></div>
-    <div id="prod-list"></div>
-    <button class="btn btn-outline" style="margin-top:8px" onclick="mobileStep(3)">Fotos →</button>
+    <div class="step-nav">
+      <button type="button" class="btn-back" onclick="mobileStep(1)">← Voltar</button>
+    </div>
+    <div class="card" style="padding:0"><div class="prod-table-wrap"><div id="prod-list"></div></div></div>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="mobileStep(3)">Continuar para fotos →</button>
   </div>
   <div id="m-step3" style="display:none">
+    <div class="step-nav">
+      <button type="button" class="btn-back" onclick="mobileStep(2)">← Voltar aos produtos</button>
+    </div>
     <div class="card">
       <label class="photo-zone">📷 Adicionar fotos do linear<input type="file" accept="image/*" capture="environment" multiple id="f-fotos" onchange="onPhotos(this)"></label>
       <div class="thumbs" id="f-thumbs"></div>
@@ -172,19 +173,31 @@ const SUPA_URL='https://qnscwppgljobelplgbkp.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuc2N3cHBnbGpvYmVscGxnYmtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMDc3NzgsImV4cCI6MjA5MTY4Mzc3OH0.9ysq0ibsn3qDPHe5WYF-yyq9-vEKjc_hIn9BNKZccYY';
 const HDR={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
 
+const CATALOG=[
+  {posicao:1,material:'7805019',nome:'DELTA Q QALIDUS COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082026909'},
+  {posicao:2,material:'7803139',nome:'DELTA Q CANELA COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082042558'},
+  {posicao:3,material:'7805110',nome:'DELTA Q COLÔMBIA COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082047522'},
+  {posicao:4,material:'7862809',nome:'DELTA Q MENTA & CHOCOLATE 10CAP',categoria:'Café Caps 10Un',ean:'5601082056098'},
+  {posicao:5,material:'7805022',nome:'DELTA Q QONVICTUS COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082026954'},
+  {posicao:6,material:'7805020',nome:'DELTA Q QHARACTER COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082026930'},
+  {posicao:7,material:'7805023',nome:'DELTA Q AQTIVUS COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082026978'},
+  {posicao:8,material:'7805155',nome:'DELTA Q CARAMELO COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082058061'},
+  {posicao:1,material:'7801734',nome:'DELTA COLÔMBIA COFFEE MU 250g',categoria:'Café moído',ean:'5601082035154'},
+  {posicao:2,material:'7806713',nome:'DELTA VIETNAM COFFEE MU 250g',categoria:'Café moído',ean:'5601082045429'},
+  {posicao:3,material:'7806814',nome:'DELTA CUBA COFFEE MU 250g',categoria:'Café moído',ean:'5601082045436'},
+  {posicao:4,material:'7802415',nome:'DELTA TIMOR COFFEE MU 250g',categoria:'Café moído',ean:'5601082035161'}
+];
+const CAT_ORDER=['Café Caps 10Un','Café moído'];
+
 let lojas=[], produtos=[], entradas={}, fotosPendentes=[], mobileStepN=1, recolhedor='';
 
-document.getElementById('login-select').onchange=function(){
-  document.getElementById('login-outro').style.display=this.value==='Outro (escrever abaixo)'?'block':'none';
-};
+document.getElementById('login-nome').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register(BASE+'sw.js').catch(()=>{});}
 
 function doLogin(){
-  const sel=document.getElementById('login-select').value;
-  const outro=document.getElementById('login-outro').value.trim();
-  recolhedor=sel==='Outro (escrever abaixo)'?outro:sel;
-  if(!recolhedor){alert('Seleciona o teu nome.');return;}
+  recolhedor=document.getElementById('login-nome').value.trim();
+  if(!recolhedor){alert('Escreve o teu nome para continuar.');return;}
   sessionStorage.setItem('carrefour_user',recolhedor);
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-header').style.display='flex';
@@ -195,6 +208,15 @@ function doLogin(){
 
 async function apiGet(p){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{headers:HDR});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function apiPost(p,b){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{method:'POST',headers:{...HDR,'Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+
+async function syncCatalog(){
+  const r=await fetch(SUPA_URL+'/rest/v1/carrefour_produtos?on_conflict=material',{
+    method:'POST',
+    headers:{...HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify(CATALOG)
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
 
 function setOnline(ok){
   document.getElementById('dot').className='dot'+(ok?' on':'');
@@ -236,7 +258,12 @@ async function init(){
   document.getElementById('f-data').value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
   try{
     lojas=await apiGet('carrefour_lojas?select=*&order=codigo');
-    produtos=await apiGet('carrefour_produtos?select=*&order=categoria,posicao');
+    produtos=await apiGet('carrefour_produtos?select=*&order=posicao');
+    const temMoido=produtos.some(p=>p.categoria==='Café moído');
+    if(produtos.length<CATALOG.length||!temMoido){
+      await syncCatalog();
+      produtos=await apiGet('carrefour_produtos?select=*&order=posicao');
+    }
     setOnline(true);
   }catch(e){
     setOnline(false);
@@ -256,17 +283,28 @@ async function init(){
 function renderProdutos(){
   const byCat={};
   produtos.forEach(p=>{(byCat[p.categoria]=byCat[p.categoria]||[]).push(p);});
-  let html='';
-  Object.entries(byCat).forEach(([cat,items],i)=>{
-    html+=`<div class="card" style="padding:0 16px"><div class="cat-hdr" onclick="this.nextElementSibling.classList.toggle('open')">${cat}<span style="color:var(--muted);font-size:12px">${items.length} prod.</span></div><div class="cat-body${i===0?' open':''}">`;
-    items.forEach(p=>{
-      html+=`<div class="prod"><div class="prod-name">${p.nome}</div><div class="prod-meta">${p.material} · EAN ${p.ean||'—'}</div><div class="grid3">
-        <input type="number" min="0" placeholder="Físico" data-p="${p.id}" data-f="sf" oninput="setEntrada(this)">
-        <input type="number" min="0" placeholder="Sistema" data-p="${p.id}" data-f="ss" oninput="setEntrada(this)">
-        <input inputmode="decimal" placeholder="€" data-p="${p.id}" data-f="p" oninput="setEntrada(this)"></div></div>`;
-    });
-    html+='</div></div>';
+  Object.keys(byCat).forEach(c=>byCat[c].sort((a,b)=>a.posicao-b.posicao));
+  const cats=Object.keys(byCat).sort((a,b)=>{
+    const ia=CAT_ORDER.indexOf(a), ib=CAT_ORDER.indexOf(b);
+    if(ia>=0&&ib>=0) return ia-ib;
+    if(ia>=0) return -1;
+    if(ib>=0) return 1;
+    return a.localeCompare(b);
   });
+  let html='<p style="font-size:12px;color:var(--muted);margin-bottom:8px">Desliza a lista — <strong>'+produtos.length+'</strong> produtos ('+cats.map(c=>byCat[c].length+' '+c).join(' · ')+')</p>';
+  html+='<table class="prod-table"><thead><tr><th>Produto</th><th class="num">Stock na loja</th><th class="num">Stock no sistema</th><th class="num">Preço R$</th></tr></thead><tbody>';
+  cats.forEach(cat=>{
+    const items=byCat[cat];
+    html+=`<tr class="cat-row"><td colspan="4">${cat} (${items.length})</td></tr>`;
+    items.forEach(p=>{
+      const e=entradas[p.id]||{sf:'',ss:'',p:''};
+      html+=`<tr><td><div class="prod-name">${p.nome}</div><div class="prod-meta">${p.material} · EAN ${p.ean||'—'}</div></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder="—" value="${e.sf}" data-p="${p.id}" data-f="sf" oninput="setEntrada(this)"></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder="—" value="${e.ss}" data-p="${p.id}" data-f="ss" oninput="setEntrada(this)"></td>
+        <td><input inputmode="decimal" placeholder="0,00" value="${e.p}" data-p="${p.id}" data-f="p" oninput="setEntrada(this)"></td></tr>`;
+    });
+  });
+  html+='</tbody></table>';
   document.getElementById('prod-list').innerHTML=html;
 }
 
@@ -328,10 +366,10 @@ async function showDetail(id){
   const byCat={};
   itens.forEach(it=>{(byCat[it.carrefour_produtos?.categoria||'Outros']=byCat[it.carrefour_produtos?.categoria||'Outros']||[]).push(it);});
   Object.entries(byCat).forEach(([cat,rows])=>{
-    html+=`<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:12px 0 6px">${cat}</p><table><thead><tr><th>Produto</th><th class="num">Físico</th><th class="num">Sistema</th><th class="num">Dif.</th><th class="num">Preço</th></tr></thead><tbody>`;
+    html+=`<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:12px 0 6px">${cat}</p><table><thead><tr><th>Produto</th><th class="num">Stock na loja</th><th class="num">Stock no sistema</th><th class="num">Dif.</th><th class="num">Preço R$</th></tr></thead><tbody>`;
     rows.forEach(it=>{
       const sf=it.stock_fisico,ss=it.stock_sistema,dif=(sf!=null&&ss!=null)?sf-ss:null;
-      html+=`<tr><td>${it.carrefour_produtos?.nome||'—'}<br><span style="font-size:11px;color:var(--muted)">${it.carrefour_produtos?.material||''}</span></td><td class="num">${sf??'—'}</td><td class="num">${ss??'—'}</td><td class="num ${dif&&dif<0?'diff-warn':dif&&dif>0?'diff-ok':''}">${dif!=null?(dif>0?'+'+dif:dif):'—'}</td><td class="num">${it.preco!=null?Number(it.preco).toFixed(2)+' €':'—'}</td></tr>`;
+      html+=`<tr><td>${it.carrefour_produtos?.nome||'—'}<br><span style="font-size:11px;color:var(--muted)">${it.carrefour_produtos?.material||''}</span></td><td class="num">${sf??'—'}</td><td class="num">${ss??'—'}</td><td class="num ${dif&&dif<0?'diff-warn':dif&&dif>0?'diff-ok':''}">${dif!=null?(dif>0?'+'+dif:dif):'—'}</td><td class="num">${it.preco!=null?'R$ '+Number(it.preco).toFixed(2).replace('.',','):'—'}</td></tr>`;
     });
     html+='</tbody></table>';
   });

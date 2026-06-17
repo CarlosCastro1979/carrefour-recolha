@@ -72,7 +72,7 @@ INSERT INTO carrefour_lojas (codigo, nome) VALUES
   ('TBE','Loja TBE'),('TTE','Loja TTE')
 ON CONFLICT (codigo) DO UPDATE SET nome = EXCLUDED.nome;
 
--- Produtos (folha Carrefour)
+-- Produtos (folha Carrefour — cápsulas + moídos)
 INSERT INTO carrefour_produtos (posicao, material, nome, categoria, ean) VALUES
   (1,'7805019','DELTA Q QALIDUS COFFEE 10CAP','Café Caps 10Un','5601082026909'),
   (2,'7803139','DELTA Q CANELA COFFEE 10CAP','Café Caps 10Un','5601082042558'),
@@ -84,7 +84,8 @@ INSERT INTO carrefour_produtos (posicao, material, nome, categoria, ean) VALUES
   (8,'7805155','DELTA Q CARAMELO COFFEE 10CAP','Café Caps 10Un','5601082058061'),
   (1,'7801734','DELTA COLÔMBIA COFFEE MU 250g','Café moído','5601082035154'),
   (2,'7806713','DELTA VIETNAM COFFEE MU 250g','Café moído','5601082045429'),
-  (3,'7802415','DELTA TIMOR COFFEE MU 250g','Café moído','5601082035161')
+  (3,'7806814','DELTA CUBA COFFEE MU 250g','Café moído','5601082045436'),
+  (4,'7802415','DELTA TIMOR COFFEE MU 250g','Café moído','5601082035161')
 ON CONFLICT (material) DO UPDATE SET
   posicao = EXCLUDED.posicao, nome = EXCLUDED.nome,
   categoria = EXCLUDED.categoria, ean = EXCLUDED.ean;
