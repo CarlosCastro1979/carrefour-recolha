@@ -1,5 +1,5 @@
--- Correr no Supabase SQL Editor se faltarem produtos (ex.: moídos)
--- Pode correr quantas vezes quiser — não duplica
+-- Executar no SQL Editor do Supabase (projeto qnscwppgljobelplgbkp)
+-- v6: catálogo 11 produtos — remove Cuba/Caramelo, adiciona Qharisma, renomeia categoria cápsulas
 
 INSERT INTO carrefour_produtos (posicao, material, nome, categoria, ean) VALUES
   (1,'7801734','DELTA COLÔMBIA COFFEE MU 250g','Café moído','5601082035154'),
@@ -16,3 +16,11 @@ INSERT INTO carrefour_produtos (posicao, material, nome, categoria, ean) VALUES
 ON CONFLICT (material) DO UPDATE SET
   posicao = EXCLUDED.posicao, nome = EXCLUDED.nome,
   categoria = EXCLUDED.categoria, ean = EXCLUDED.ean;
+
+-- Descontinuar produtos removidos do catálogo (mantém histórico em recolhas)
+UPDATE carrefour_produtos SET categoria = 'Descontinuado', posicao = 99
+WHERE material IN ('7806814', '7805155');
+
+-- Renomear categoria antiga em produtos ainda activos (idempotente)
+UPDATE carrefour_produtos SET categoria = 'Café cápsulas'
+WHERE categoria = 'Café Caps 10Un' AND material NOT IN ('7806814', '7805155');

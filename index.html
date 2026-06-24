@@ -207,7 +207,7 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 <div class="view" id="view-sistema">
   <div class="card">
     <p style="font-weight:600;margin-bottom:8px">Stock do sistema (portal Carrefour)</p>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Carrega o Excel exportado do portal Carrefour (folha <strong>Sheet1</strong>). São lidas as colunas <strong>Sigla da Loja</strong>, <strong>EAN do Produto</strong> e <strong>Estoque Disponível</strong> — valores como <strong>324.000</strong> são interpretados como 324 unidades. Apenas as 10 lojas Delta (BSP, CPS, ERB, PLN, SAN, SJC, SOR, SPP, TBE, TTE) e os 12 produtos do catálogo são gravados; o stock aparece automaticamente na recolha.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Carrega o Excel exportado do portal Carrefour (folha <strong>Sheet1</strong>). São lidas as colunas <strong>Sigla da Loja</strong>, <strong>EAN do Produto</strong> e <strong>Estoque Disponível</strong> — valores como <strong>324.000</strong> são interpretados como 324 unidades. Apenas as 10 lojas Delta (BSP, CPS, ERB, PLN, SAN, SJC, SOR, SPP, TBE, TTE) e os 11 produtos do catálogo são gravados; o stock aparece automaticamente na recolha.</p>
     <label class="upload-zone">📂 Selecionar Excel (.xlsx)<input type="file" accept=".xlsx,.xls" id="sys-excel" onchange="importarStockSistema(this)"></label>
     <p id="sys-status" style="font-size:13px;color:var(--muted);margin-top:12px">Nenhum ficheiro carregado.</p>
     <div id="sys-preview" style="margin-top:12px;font-size:12px"></div>
@@ -250,20 +250,20 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const HDR={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
 
 const CATALOG=[
-  {posicao:1,material:'7805019',nome:'DELTA Q QALIDUS COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082026909'},
-  {posicao:2,material:'7803139',nome:'DELTA Q CANELA COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082042558'},
-  {posicao:3,material:'7805110',nome:'DELTA Q COLÔMBIA COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082047522'},
-  {posicao:4,material:'7862809',nome:'DELTA Q MENTA & CHOCOLATE 10CAP',categoria:'Café Caps 10Un',ean:'5601082056098'},
-  {posicao:5,material:'7805022',nome:'DELTA Q QONVICTUS COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082026954'},
-  {posicao:6,material:'7805020',nome:'DELTA Q QHARACTER COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082026930'},
-  {posicao:7,material:'7805023',nome:'DELTA Q AQTIVUS COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082026978'},
-  {posicao:8,material:'7805155',nome:'DELTA Q CARAMELO COFFEE 10CAP',categoria:'Café Caps 10Un',ean:'5601082058061'},
   {posicao:1,material:'7801734',nome:'DELTA COLÔMBIA COFFEE MU 250g',categoria:'Café moído',ean:'5601082035154'},
   {posicao:2,material:'7806713',nome:'DELTA VIETNAM COFFEE MU 250g',categoria:'Café moído',ean:'5601082045429'},
-  {posicao:3,material:'7806814',nome:'DELTA CUBA COFFEE MU 250g',categoria:'Café moído',ean:'5601082045436'},
-  {posicao:4,material:'7802415',nome:'DELTA TIMOR COFFEE MU 250g',categoria:'Café moído',ean:'5601082035161'}
+  {posicao:3,material:'7802415',nome:'DELTA TIMOR COFFEE MU 250g',categoria:'Café moído',ean:'5601082035161'},
+  {posicao:1,material:'7805019',nome:'DELTA Q QALIDUS COFFEE 10CAP',categoria:'Café cápsulas',ean:'5601082026909'},
+  {posicao:2,material:'7803139',nome:'DELTA Q CANELA COFFEE 10CAP',categoria:'Café cápsulas',ean:'5601082042558'},
+  {posicao:3,material:'7805110',nome:'DELTA Q COLÔMBIA COFFEE 10CAP',categoria:'Café cápsulas',ean:'5601082047522'},
+  {posicao:4,material:'7862809',nome:'DELTA Q MENTA & CHOCOLATE 10CAP',categoria:'Café cápsulas',ean:'5601082056098'},
+  {posicao:5,material:'7805022',nome:'DELTA Q QONVICTUS COFFEE 10CAP',categoria:'Café cápsulas',ean:'5601082026954'},
+  {posicao:6,material:'7805020',nome:'DELTA Q QHARACTER COFFEE 10CAP',categoria:'Café cápsulas',ean:'5601082026930'},
+  {posicao:7,material:'7805023',nome:'DELTA Q AQTIVUS COFFEE 10CAP',categoria:'Café cápsulas',ean:'5601082026978'},
+  {posicao:8,material:'7805021',nome:'DELTA Q QHARISMA COFFEE 10CAP',categoria:'Café cápsulas',ean:'5601082040226'}
 ];
-const CAT_ORDER=['Café Caps 10Un','Café moído'];
+const CAT_ORDER=['Café moído','Café cápsulas'];
+const CATALOG_MATS=new Set(CATALOG.map(c=>c.material));
 
 const LOJAS=[
   {codigo:'BSP',nome:'CRFO SANTOS PRAIAMAR · BSP'},
@@ -421,6 +421,14 @@ function colIndexExcel(hdr,names){
   return -1;
 }
 
+function catalogNeedsSync(dbProdutos){
+  const active=dbProdutos.filter(p=>CATALOG_MATS.has(p.material));
+  if(active.length!==CATALOG.length) return true;
+  return CATALOG.some(c=>{
+    const p=dbProdutos.find(x=>x.material===c.material);
+    return !p||p.categoria!==c.categoria||p.nome!==c.nome||p.posicao!==c.posicao||p.ean!==c.ean;
+  });
+}
 async function syncCatalog(){
   const r=await fetch(SUPA_URL+'/rest/v1/carrefour_produtos?on_conflict=material',{
     method:'POST',
@@ -488,11 +496,11 @@ async function init(){
     await syncLojas();
     lojas=await apiGet('carrefour_lojas?select=*&order=codigo');
     produtos=await apiGet('carrefour_produtos?select=*&order=posicao');
-    const temMoido=produtos.some(p=>p.categoria==='Café moído');
-    if(produtos.length<CATALOG.length||!temMoido){
+    if(catalogNeedsSync(produtos)){
       await syncCatalog();
       produtos=await apiGet('carrefour_produtos?select=*&order=posicao');
     }
+    produtos=produtos.filter(p=>CATALOG_MATS.has(p.material));
     setOnline(true);
   }catch(e){
     setOnline(false);
