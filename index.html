@@ -205,7 +205,7 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 <div class="view" id="view-sistema">
   <div class="card">
     <p style="font-weight:600;margin-bottom:8px">Stock do sistema (portal Carrefour)</p>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Carrega o Excel exportado do portal. Os stocks do sistema serão preenchidos automaticamente na recolha por loja. O formato exacto será configurado quando tiveres o ficheiro de exemplo.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Excel exportado do portal Carrefour. Usa as colunas <strong>Sigla da Loja</strong>, <strong>EAN do Produto</strong> e <strong>Estoque Disponível</strong>. Apenas as 10 lojas Delta e os 12 produtos do catálogo são importados. O stock aparece automaticamente na recolha.</p>
     <label class="upload-zone">📂 Selecionar Excel (.xlsx)<input type="file" accept=".xlsx,.xls" id="sys-excel" onchange="importarStockSistema(this)"></label>
     <p id="sys-status" style="font-size:13px;color:var(--muted);margin-top:12px">Nenhum ficheiro carregado.</p>
     <div id="sys-preview" style="margin-top:12px;font-size:12px"></div>
@@ -386,6 +386,31 @@ function isRuptura(sf){return sf===0||sf==='0'}
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function fmtPct(n){return (Math.round(n*10)/10).toFixed(1).replace('.',',')+'%'}
 function fmtPreco(v){return v!=null&&!isNaN(v)?'R$ '+Number(v).toFixed(2).replace('.',','):''}
+const LOJA_SIGLAS=new Set(LOJAS.map(l=>l.codigo));
+
+function parseStockPortal(v){
+  if(v===''||v==null) return null;
+  const s=String(v).trim();
+  if(/,\d/.test(s)) return Math.round(parseFloat(s.replace(/\./g,'').replace(',','.')));
+  const n=parseFloat(s);
+  return isNaN(n)?null:Math.round(n);
+}
+function findExcelHeaderRow(data){
+  for(let i=0;i<Math.min(25,data.length);i++){
+    const row=(data[i]||[]).map(c=>String(c).trim());
+    if(row.some(h=>h==='Sigla da Loja')&&row.some(h=>h.includes('EAN'))) return i;
+  }
+  return 0;
+}
+function colIndexExcel(hdr,names){
+  for(const n of names){
+    let i=hdr.findIndex(h=>String(h).trim().toLowerCase()===n.toLowerCase());
+    if(i>=0) return i;
+    i=hdr.findIndex(h=>String(h).trim().toLowerCase().includes(n.toLowerCase()));
+    if(i>=0) return i;
+  }
+  return -1;
+}
 
 async function syncCatalog(){
   const r=await fetch(SUPA_URL+'/rest/v1/carrefour_produtos?on_conflict=material',{
@@ -811,15 +836,46 @@ async function loadSistemaGrid(){
 async function importarStockSistema(inp){
   const file=inp.files[0]; if(!file) return;
   const st=document.getElementById('sys-status');
+  const prev=document.getElementById('sys-preview');
+  if(typeof XLSX==='undefined'){alert('Biblioteca Excel indisponível. Verifica a internet e recarrega.');return;}
   st.textContent='A ler '+file.name+'...';
   try{
+    if(!produtos.length) produtos=await apiGet('carrefour_produtos?select=*&order=posicao');
     const wb=XLSX.read(await file.arrayBuffer());
-    const sheet=wb.Sheets[wb.SheetNames[0]];
-    const data=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
-    document.getElementById('sys-preview').innerHTML='<p style="color:var(--muted)">Ficheiro: <strong>'+escHtml(file.name)+'</strong> · '+data.length+' linhas · folha «'+escHtml(wb.SheetNames[0])+'»</p><p style="margin-top:8px;color:var(--warn)">Formato do portal ainda não configurado — envia-me o Excel de exemplo para activar a importação automática por loja.</p>';
-    st.textContent='Ficheiro recebido — aguarda configuração do formato.';
+    const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    const hri=findExcelHeaderRow(data);
+    const hdr=(data[hri]||[]).map(c=>String(c).trim());
+    const iSigla=colIndexExcel(hdr,['Sigla da Loja','Sigla da L']);
+    const iEan=colIndexExcel(hdr,['EAN do Produto','EAN']);
+    const iEst=colIndexExcel(hdr,['Estoque Disponível','Estoque Disponivel']);
+    if(iSigla<0||iEan<0||iEst<0) throw new Error('Colunas não encontradas: Sigla da Loja, EAN do Produto, Estoque Disponível.');
+    const eanMap={};
+    produtos.forEach(p=>{if(p.ean) eanMap[String(p.ean).replace(/\D/g,'')]=p.id;});
+    const byKey={};
+    let skipLoja=0, skipEan=0;
+    for(let i=hri+1;i<data.length;i++){
+      const row=data[i]; if(!row||!row.length) continue;
+      const sigla=String(row[iSigla]||'').trim().toUpperCase();
+      if(!LOJA_SIGLAS.has(sigla)){skipLoja++;continue;}
+      const ean=String(row[iEan]||'').replace(/\D/g,'');
+      const pid=eanMap[ean];
+      if(!pid){skipEan++;continue;}
+      const stock=parseStockPortal(row[iEst]);
+      if(stock==null) continue;
+      byKey[sigla+'|'+pid]={loja_codigo:sigla,produto_id:pid,stock_sistema:stock};
+    }
+    const rows=Object.values(byKey);
+    if(!rows.length) throw new Error('Nenhum registo válido. Verifica se o Excel tem produtos Delta nas 10 lojas.');
+    st.textContent='A gravar '+rows.length+' registos...';
+    for(let i=0;i<rows.length;i+=100) await apiUpsertStock(rows.slice(i,i+100));
+    const lojasN=new Set(rows.map(r=>r.loja_codigo)).size;
+    const prodsN=new Set(rows.map(r=>r.produto_id)).size;
+    st.innerHTML=`<span style="color:var(--ok);font-weight:600">✓ ${rows.length} stocks importados</span> — ${lojasN} lojas · ${prodsN} produtos`;
+    prev.innerHTML=`<p style="color:var(--muted)">${escHtml(file.name)} · ${data.length-1} linhas lidas · ignoradas: ${skipLoja} outras lojas, ${skipEan} EANs fora do catálogo</p>`;
+    await loadSistemaGrid();
   }catch(e){
-    st.textContent='Erro ao ler ficheiro: '+e.message;
+    st.textContent='Erro: '+e.message;
+    prev.innerHTML='';
   }
   inp.value='';
 }
