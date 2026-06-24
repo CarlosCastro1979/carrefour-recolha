@@ -74,7 +74,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .list-item.selected{background:var(--accent-soft)}
 .prod-table input{width:100%;min-width:52px;padding:8px 4px;border:1px solid var(--border);border-radius:6px;text-align:center;font-size:14px;margin:0}
 .prod-table .cell-vc{text-align:center;padding:8px 4px}
-.prod-table .cell-vc input[type=checkbox]{width:22px;height:22px;min-width:22px;margin:0;cursor:pointer;accent-color:var(--accent)}
+.prod-table .cell-vc input[type=date]{width:100%;min-width:120px;padding:8px 4px;border:1px solid var(--border);border-radius:6px;font-size:14px;margin:0}
 .prod-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .photo-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px;text-align:center;background:#f8fafc;cursor:pointer;display:block}
 .photo-zone:hover{border-color:var(--accent);background:var(--accent-soft)}
@@ -280,7 +280,14 @@ const LOJAS=[
 
 let lojas=[], produtos=[], entradas={}, fotosPendentes=[], mobileStepN=1, recolhedor='', selectedRecolhaId=null, reportCache=null, precosHint='';
 
-function emptyEntrada(){return{sf:'',ss:'',pd:'',pp:'',vc:false};}
+function emptyEntrada(){return{sf:'',ss:'',pd:'',pp:'',vc:''};}
+function fmtDataValidade(v){
+  if(!v)return'';
+  const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return`${m[3]}/${m[2]}/${m[1]}`;
+  const d=new Date(v);
+  return isNaN(d)?'':d.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
 function parsePreco(v){if(v===''||v==null)return null;const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n;}
 function precoStr(v){return v!=null&&!isNaN(v)?String(v).replace('.',','):'';}
 function fmtPrecoPair(de,por,leg){
@@ -527,14 +534,14 @@ function renderProdutos(){
         <td><input type="number" min="0" inputmode="numeric" placeholder="—" value="${e.ss}" data-p="${p.id}" data-f="ss" oninput="setEntrada(this)"></td>
         <td><input inputmode="decimal" placeholder="—" value="${e.pd}" data-p="${p.id}" data-f="pd" oninput="setEntrada(this)"></td>
         <td><input inputmode="decimal" placeholder="—" value="${e.pp}" data-p="${p.id}" data-f="pp" oninput="setEntrada(this)"></td>
-        <td class="cell-vc"><input type="checkbox"${e.vc?' checked':''} data-p="${p.id}" data-f="vc" onchange="setEntrada(this)" aria-label="Validade curta"></td></tr>`;
+        <td class="cell-vc"><input type="date" value="${e.vc}" data-p="${p.id}" data-f="vc" oninput="setEntrada(this)" aria-label="Validade +Curta"></td></tr>`;
     });
   });
   html+='</tbody></table>';
   document.getElementById('prod-list').innerHTML=html;
 }
 
-function setEntrada(inp){entradas[inp.dataset.p][inp.dataset.f]=inp.type==='checkbox'?inp.checked:inp.value;}
+function setEntrada(inp){entradas[inp.dataset.p][inp.dataset.f]=inp.value;}
 function onPhotos(inp){[...inp.files].forEach(f=>{const r=new FileReader();r.onload=e=>{fotosPendentes.push(e.target.result);renderThumbs();};r.readAsDataURL(f);});inp.value='';}
 function renderThumbs(){
   document.getElementById('f-thumbs').innerHTML=fotosPendentes.map((src,i)=>
@@ -558,7 +565,7 @@ async function guardarRecolha(){
         stock_sistema:e.ss!==''?+e.ss:null,
         preco_de:parsePreco(e.pd),
         preco_por:parsePreco(e.pp),
-        validade_curta:!!e.vc
+        validade_curta:e.vc||null
       };
     });
     await apiPost('carrefour_recolha_itens',itens);
@@ -627,7 +634,7 @@ async function showDetail(id){
     const cat=it.carrefour_produtos?.categoria||'Outros';
     if(cat!==lastCat){html+=`<tr class="cat-row"><td colspan="7">${cat}</td></tr>`;lastCat=cat;}
     const sf=it.stock_fisico,ss=it.stock_sistema,dif=(sf!=null&&ss!=null)?sf-ss:null;
-    html+=`<tr><td>${prodCellFromIt(it)}</td><td class="num ${isRuptura(sf)?'diff-warn':''}">${sf??'—'}</td><td class="num">${ss??'—'}</td><td class="num ${dif!=null&&dif!==0?(dif<0?'diff-warn':'diff-ok'):''}">${dif!=null?(dif>0?'+'+dif:dif):'—'}</td><td class="num">${fmtPreco(it.preco_de)||'—'}</td><td class="num">${fmtPreco(it.preco_por??it.preco)||'—'}</td><td class="num">${it.validade_curta?'Sim':'Não'}</td></tr>`;
+    html+=`<tr><td>${prodCellFromIt(it)}</td><td class="num ${isRuptura(sf)?'diff-warn':''}">${sf??'—'}</td><td class="num">${ss??'—'}</td><td class="num ${dif!=null&&dif!==0?(dif<0?'diff-warn':'diff-ok'):''}">${dif!=null?(dif>0?'+'+dif:dif):'—'}</td><td class="num">${fmtPreco(it.preco_de)||'—'}</td><td class="num">${fmtPreco(it.preco_por??it.preco)||'—'}</td><td class="num">${fmtDataValidade(it.validade_curta)||'—'}</td></tr>`;
   });
   html+='</tbody></table>';
   document.getElementById('d-detail').innerHTML=html;
@@ -748,7 +755,7 @@ async function exportVisita(id){
   itens.forEach(it=>{
     const p=it.carrefour_produtos||{};
     const sf=it.stock_fisico,ss=it.stock_sistema;
-    rows.push([p.material,p.nome,p.ean,p.categoria,sf??'',ss??'',(sf!=null&&ss!=null)?sf-ss:'',it.preco_de??'',it.preco_por??it.preco??'',it.validade_curta?'Sim':'Não',isRuptura(sf)?'Sim':'Não']);
+    rows.push([p.material,p.nome,p.ean,p.categoria,sf??'',ss??'',(sf!=null&&ss!=null)?sf-ss:'',it.preco_de??'',it.preco_por??it.preco??'',fmtDataValidade(it.validade_curta)||'',isRuptura(sf)?'Sim':'Não']);
   });
   downloadExcel(`carrefour-${rec.loja_codigo}-${rec.id}.xlsx`,rows,'Visita');
 }
@@ -760,7 +767,7 @@ async function exportPorLoja(){
     const loja=lojas.find(l=>l.codigo===rec.loja_codigo);
     (itensByRec[rec.id]||[]).forEach(it=>{
       const p=it.carrefour_produtos||{};
-      rows.push([loja?.nome||rec.loja_codigo,rec.loja_codigo,new Date(rec.data_recolha).toLocaleString('pt-PT'),rec.recolhedor,rec.notas||'',p.material,p.nome,p.ean,it.stock_fisico??'',it.stock_sistema??'',it.preco_de??'',it.preco_por??it.preco??'',it.validade_curta?'Sim':'Não',isRuptura(it.stock_fisico)?'Sim':'Não']);
+      rows.push([loja?.nome||rec.loja_codigo,rec.loja_codigo,new Date(rec.data_recolha).toLocaleString('pt-PT'),rec.recolhedor,rec.notas||'',p.material,p.nome,p.ean,it.stock_fisico??'',it.stock_sistema??'',it.preco_de??'',it.preco_por??it.preco??'',fmtDataValidade(it.validade_curta)||'',isRuptura(it.stock_fisico)?'Sim':'Não']);
     });
   });
   downloadExcel('carrefour-por-loja.xlsx',rows,'Por loja');
@@ -769,12 +776,12 @@ async function exportPorLoja(){
 async function exportPorReferencia(){
   const {latest,itensByRec}=await buildReportCache();
   const codes=lojas.map(l=>l.codigo);
-  const hdr=['Material','Produto','EAN','Categoria','Lojas em rutura','Nº lojas rutura','Lojas c/ validade curta','Nº lojas validade curta',...codes];
+  const hdr=['Material','Produto','EAN','Categoria','Lojas em rutura','Nº lojas rutura',...codes,...codes.map(c=>c+' valid.')];
   const rows=[hdr];
   produtos.forEach(p=>{
     const lojaStocks={};
+    const lojaValidades={};
     const lojasRut=[];
-    const lojasVc=[];
     codes.forEach(c=>{
       const rec=latest[c];
       let sf='';
@@ -782,11 +789,11 @@ async function exportPorReferencia(){
         const it=(itensByRec[rec.id]||[]).find(x=>x.produto_id===p.id);
         sf=it?.stock_fisico??'';
         if(it&&isRuptura(it.stock_fisico)) lojasRut.push(c);
-        if(it&&it.validade_curta) lojasVc.push(c);
+        if(it?.validade_curta) lojaValidades[c]=fmtDataValidade(it.validade_curta);
       }
       lojaStocks[c]=sf;
     });
-    rows.push([p.material,p.nome,p.ean,p.categoria,lojasRut.join(' '),lojasRut.length,lojasVc.join(' '),lojasVc.length,...codes.map(c=>lojaStocks[c])]);
+    rows.push([p.material,p.nome,p.ean,p.categoria,lojasRut.join(' '),lojasRut.length,...codes.map(c=>lojaStocks[c]),...codes.map(c=>lojaValidades[c]||'')]);
   });
   downloadExcel('carrefour-por-referencia.xlsx',rows,'Por referência');
 }
