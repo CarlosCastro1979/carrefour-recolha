@@ -205,7 +205,7 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 <div class="view" id="view-sistema">
   <div class="card">
     <p style="font-weight:600;margin-bottom:8px">Stock do sistema (portal Carrefour)</p>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Excel exportado do portal Carrefour. Usa as colunas <strong>Sigla da Loja</strong>, <strong>EAN do Produto</strong> e <strong>Estoque Disponível</strong>. Apenas as 10 lojas Delta e os 12 produtos do catálogo são importados. O stock aparece automaticamente na recolha.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Carrega o Excel exportado do portal Carrefour (folha <strong>Sheet1</strong>). São lidas as colunas <strong>Sigla da Loja</strong>, <strong>EAN do Produto</strong> e <strong>Estoque Disponível</strong> — valores como <strong>324.000</strong> são interpretados como 324 unidades. Apenas as 10 lojas Delta (BSP, CPS, ERB, PLN, SAN, SJC, SOR, SPP, TBE, TTE) e os 12 produtos do catálogo são gravados; o stock aparece automaticamente na recolha.</p>
     <label class="upload-zone">📂 Selecionar Excel (.xlsx)<input type="file" accept=".xlsx,.xls" id="sys-excel" onchange="importarStockSistema(this)"></label>
     <p id="sys-status" style="font-size:13px;color:var(--muted);margin-top:12px">Nenhum ficheiro carregado.</p>
     <div id="sys-preview" style="margin-top:12px;font-size:12px"></div>
@@ -842,7 +842,8 @@ async function importarStockSistema(inp){
   try{
     if(!produtos.length) produtos=await apiGet('carrefour_produtos?select=*&order=posicao');
     const wb=XLSX.read(await file.arrayBuffer());
-    const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    const sheetName=wb.SheetNames.includes('Sheet1')?'Sheet1':wb.SheetNames[0];
+    const data=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
     const hri=findExcelHeaderRow(data);
     const hdr=(data[hri]||[]).map(c=>String(c).trim());
     const iSigla=colIndexExcel(hdr,['Sigla da Loja','Sigla da L']);
@@ -851,6 +852,7 @@ async function importarStockSistema(inp){
     if(iSigla<0||iEan<0||iEst<0) throw new Error('Colunas não encontradas: Sigla da Loja, EAN do Produto, Estoque Disponível.');
     const eanMap={};
     produtos.forEach(p=>{if(p.ean) eanMap[String(p.ean).replace(/\D/g,'')]=p.id;});
+    const now=new Date().toISOString();
     const byKey={};
     let skipLoja=0, skipEan=0;
     for(let i=hri+1;i<data.length;i++){
@@ -862,7 +864,7 @@ async function importarStockSistema(inp){
       if(!pid){skipEan++;continue;}
       const stock=parseStockPortal(row[iEst]);
       if(stock==null) continue;
-      byKey[sigla+'|'+pid]={loja_codigo:sigla,produto_id:pid,stock_sistema:stock};
+      byKey[sigla+'|'+pid]={loja_codigo:sigla,produto_id:pid,stock_sistema:stock,importado_em:now};
     }
     const rows=Object.values(byKey);
     if(!rows.length) throw new Error('Nenhum registo válido. Verifica se o Excel tem produtos Delta nas 10 lojas.');
