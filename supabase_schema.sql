@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS carrefour_recolha_itens (
   stock_sistema INT,
   preco NUMERIC,
   preco_de NUMERIC,
-  preco_por NUMERIC
+  preco_por NUMERIC,
+  validade_curta BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS carrefour_stock_sistema (
