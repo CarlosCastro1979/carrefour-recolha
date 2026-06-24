@@ -82,9 +82,16 @@ CREATE POLICY "anon_all carrefour_stock_sistema" ON carrefour_stock_sistema FOR 
 
 -- Lojas
 INSERT INTO carrefour_lojas (codigo, nome) VALUES
-  ('BSP','Loja BSP'),('CPS','Loja CPS'),('ERB','Loja ERB'),('PLN','Loja PLN'),
-  ('SAN','Loja SAN'),('SJC','Loja SJC'),('SOR','Loja SOR'),('SPP','Loja SPP'),
-  ('TBE','Loja TBE'),('TTE','Loja TTE')
+  ('BSP','CRFO SANTOS PRAIAMAR · BSP'),
+  ('CPS','CRFO CAMPINAS DOM PEDRO · CPS'),
+  ('ERB','AVENIDA REBOUCAS · ERB'),
+  ('PLN','PAMPLONA SHOPPING · PLN'),
+  ('SAN','SANTOS BOQUEIRAO · SAN'),
+  ('SJC','CRFO SAO JOSE CAMPOS · SJC'),
+  ('SOR','CRFO SOROCABA · SOR'),
+  ('SPP','CRFO PINHEIROS · SPP'),
+  ('TBE','CRFO TAMBORE · TBE'),
+  ('TTE','CRFO TATUAPE ANALIA FRANCO · TTE')
 ON CONFLICT (codigo) DO UPDATE SET nome = EXCLUDED.nome;
 
 -- Produtos (folha Carrefour — cápsulas + moídos)

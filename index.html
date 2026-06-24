@@ -263,6 +263,19 @@ const CATALOG=[
 ];
 const CAT_ORDER=['Café Caps 10Un','Café moído'];
 
+const LOJAS=[
+  {codigo:'BSP',nome:'CRFO SANTOS PRAIAMAR · BSP'},
+  {codigo:'CPS',nome:'CRFO CAMPINAS DOM PEDRO · CPS'},
+  {codigo:'ERB',nome:'AVENIDA REBOUCAS · ERB'},
+  {codigo:'PLN',nome:'PAMPLONA SHOPPING · PLN'},
+  {codigo:'SAN',nome:'SANTOS BOQUEIRAO · SAN'},
+  {codigo:'SJC',nome:'CRFO SAO JOSE CAMPOS · SJC'},
+  {codigo:'SOR',nome:'CRFO SOROCABA · SOR'},
+  {codigo:'SPP',nome:'CRFO PINHEIROS · SPP'},
+  {codigo:'TBE',nome:'CRFO TAMBORE · TBE'},
+  {codigo:'TTE',nome:'CRFO TATUAPE ANALIA FRANCO · TTE'}
+];
+
 let lojas=[], produtos=[], entradas={}, fotosPendentes=[], mobileStepN=1, recolhedor='', selectedRecolhaId=null, reportCache=null, precosHint='';
 
 function emptyEntrada(){return{sf:'',ss:'',pd:'',pp:''};}
@@ -382,6 +395,14 @@ async function syncCatalog(){
   });
   if(!r.ok) throw new Error(await r.text());
 }
+async function syncLojas(){
+  const r=await fetch(SUPA_URL+'/rest/v1/carrefour_lojas?on_conflict=codigo',{
+    method:'POST',
+    headers:{...HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify(LOJAS)
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
 
 function setOnline(ok){
   document.getElementById('dot').className='dot'+(ok?' on':'');
@@ -430,6 +451,8 @@ async function init(){
   document.getElementById('f-data').value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
   try{
     lojas=await apiGet('carrefour_lojas?select=*&order=codigo');
+    await syncLojas();
+    lojas=await apiGet('carrefour_lojas?select=*&order=codigo');
     produtos=await apiGet('carrefour_produtos?select=*&order=posicao');
     const temMoido=produtos.some(p=>p.categoria==='Café moído');
     if(produtos.length<CATALOG.length||!temMoido){
@@ -445,7 +468,7 @@ async function init(){
   const sel=document.getElementById('f-loja'), fil=document.getElementById('d-filtro-loja');
   sel.innerHTML=''; fil.innerHTML='<option value="">Todas</option>';
   lojas.forEach(l=>{
-    sel.innerHTML+=`<option value="${l.codigo}">${l.nome} (${l.codigo})</option>`;
+    sel.innerHTML+=`<option value="${l.codigo}">${l.nome}</option>`;
     fil.innerHTML+=`<option value="${l.codigo}">${l.nome}</option>`;
   });
   produtos.forEach(p=>{entradas[p.id]=emptyEntrada();});
@@ -645,7 +668,7 @@ function renderEvolucaoLojas(byLoja,itensByRec){
   lojas.forEach(l=>{
     const visits=(byLoja[l.codigo]||[]).slice(0,6);
     if(!visits.length){h+=`<p style="font-size:12px;color:var(--muted);margin-bottom:12px"><strong>${l.codigo}</strong> — sem visitas</p>`;return;}
-    h+=`<p style="font-weight:600;margin:14px 0 6px">${l.nome} (${l.codigo})</p>`;
+    h+=`<p style="font-weight:600;margin:14px 0 6px">${l.nome}</p>`;
     h+='<table class="prod-table rpt-table" style="margin-bottom:8px"><thead><tr><th>Data</th><th>Recolhedor</th><th class="num">Stock total</th><th class="num">Ruturas</th><th class="num">% Ruturas</th></tr></thead><tbody>';
     visits.forEach(rec=>{
       const st=visitStats(rec.id,itensByRec);
