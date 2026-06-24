@@ -34,6 +34,12 @@ header .sub{font-size:11px;color:var(--muted)}
 .cell-rut{background:#fff7ed;color:var(--warn);font-weight:700;text-align:center}
 .cell-ok{background:#ecfdf5;color:var(--ok);text-align:center}
 .cell-empty{background:#f8fafc;color:var(--muted);text-align:center}
+.cmp-table .loja-hdr{text-align:center;border-bottom:1px solid var(--border)}
+.cmp-table .sub-hdr{font-size:9px;padding:4px 3px;min-width:28px}
+.cmp-table td.cmp-f,.cmp-table td.cmp-s,.cmp-table td.cmp-d{padding:4px 3px;font-size:11px;min-width:28px}
+.cmp-table td.cmp-s.importado{color:var(--carrefour);font-style:italic}
+.cmp-table td.cmp-d.diff-match{background:#ecfdf5;color:var(--ok);font-weight:600}
+.cmp-table td.cmp-d.diff-warn-cell{background:#fff7ed;color:var(--warn);font-weight:700}
 .hint-bar{font-size:12px;color:var(--muted);background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px}
 .upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;background:#f8fafc;cursor:pointer;display:block}
 .upload-zone:hover{border-color:var(--carrefour);background:rgba(0,56,150,.04)}
@@ -96,11 +102,7 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 .login-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;max-width:400px;width:100%;box-shadow:0 12px 32px rgba(15,23,42,.1);text-align:center}
 .login-card h2{font-size:18px;margin-bottom:6px}.login-card p{color:var(--muted);font-size:13px;margin-bottom:20px}
 .pwa-hint{font-size:12px;color:var(--muted);margin-top:16px;padding:10px;background:#f8fafc;border-radius:8px}
-.home-grid{display:grid;gap:12px;margin-top:8px}
-@media(min-width:600px){.home-grid{grid-template-columns:1fr 1fr}.thumbs{grid-template-columns:repeat(4,1fr)}}
-.home-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;cursor:pointer;text-decoration:none;color:inherit;display:block;transition:box-shadow .15s}
-.home-card:hover{box-shadow:0 4px 12px rgba(15,23,42,.08)}
-.home-card strong{display:block;font-size:15px;color:var(--accent);margin-bottom:4px}
+@media(min-width:600px){.thumbs{grid-template-columns:repeat(4,1fr)}}
 @media(min-width:768px){#dash-layout{display:grid;grid-template-columns:320px 1fr;gap:16px}}
 </style>
 </head>
@@ -126,19 +128,10 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
 </header>
 
 <div class="tabs" id="main-tabs" style="display:none">
-  <button class="tab active" data-view="home">Início</button>
+  <button class="tab active" data-view="relatorios">📊 Relatórios</button>
   <button class="tab" data-view="mobile">📱 Recolha</button>
   <button class="tab" data-view="dashboard">🖥️ Histórico</button>
-  <button class="tab" data-view="relatorios">📊 Relatórios</button>
   <button class="tab" data-view="sistema">⚙️ Sistema</button>
-</div>
-
-<div class="view active" id="view-home">
-  <p style="color:var(--muted);margin-bottom:12px">Stock na loja, stock no sistema, preços (R$) e fotos dos lineares — 10 lojas.</p>
-  <div class="home-grid">
-    <a class="home-card" href="#" onclick="goTab('mobile');return false"><strong>📱 Recolha na loja</strong><span style="color:var(--muted);font-size:13px">Mobile — preencher stocks e fotos</span></a>
-    <a class="home-card" href="#" onclick="goTab('dashboard');return false"><strong>🖥️ Histórico</strong><span style="color:var(--muted);font-size:13px">Comparar stocks e ver fotos</span></a>
-  </div>
 </div>
 
 <div class="view" id="view-mobile">
@@ -148,7 +141,6 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
     <div class="step" data-s="3">3. Fotos</div>
   </div>
   <div id="m-step1"><div class="card">
-    <div class="step-nav"><button type="button" class="btn-back" onclick="goTab('home')">← Início</button></div>
     <label>Loja Carrefour</label><select id="f-loja" onchange="limparFotos();limparNotas()"></select>
     <label>Data e hora da recolha</label><input type="datetime-local" id="f-data">
     <button class="btn btn-primary" onclick="mobileStep(2)">Continuar →</button>
@@ -176,23 +168,30 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
   </div>
 </div>
 
-<div class="view view-wide" id="view-relatorios">
+<div class="view view-wide active" id="view-relatorios">
   <div class="card">
-    <p style="font-weight:600;margin-bottom:8px">Resumos na tela</p>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Última visita por loja · rutura = stock físico a zero · evolução das visitas anteriores.</p>
-    <div class="btn-row" style="margin-bottom:0">
-      <button class="btn btn-outline" onclick="exportPorLoja()">⬇ Excel por loja</button>
-      <button class="btn btn-outline" onclick="exportPorReferencia()">⬇ Excel por referência</button>
-      <button class="btn btn-outline" onclick="exportRuturas()">⬇ Excel ruturas</button>
-    </div>
+    <p style="font-weight:600;margin-bottom:6px">Comparação físico vs sistema — última visita por loja</p>
+    <div class="hint-bar">Por loja: <strong>F</strong> = stock na loja (última visita) · <strong>S</strong> = stock no sistema (visita ou <em>importado</em> do portal) · <strong>Δ</strong> = F − S · <span class="diff-ok">verde</span> = coincidência · <span class="diff-warn">laranja</span> = divergência ou rutura (F=0)</div>
+    <div class="prod-table-wrap" id="matriz-stock"><p style="color:var(--muted);font-size:13px">A carregar...</p></div>
   </div>
   <div class="card">
     <p style="font-weight:600;margin-bottom:10px">% ruturas — última visita por loja</p>
     <div class="kpi-grid" id="kpi-ruturas"><p style="color:var(--muted);font-size:13px">A carregar...</p></div>
   </div>
   <div class="card">
-    <p style="font-weight:600;margin-bottom:8px">Matriz de stock físico (última visita)</p>
-    <div class="prod-table-wrap" id="matriz-stock"><p style="color:var(--muted);font-size:13px">A carregar...</p></div>
+    <p style="font-weight:600;margin-bottom:6px">Maior divergência — última visita</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Lojas com mais produtos em que stock físico ≠ stock sistema (comparáveis).</p>
+    <div class="kpi-grid" id="kpi-divergencia"><p style="color:var(--muted);font-size:13px">A carregar...</p></div>
+  </div>
+  <div class="card">
+    <p style="font-weight:600;margin-bottom:8px">Exportar Excel</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Última visita por loja · rutura = stock físico a zero.</p>
+    <div class="btn-row" style="margin-bottom:0">
+      <button class="btn btn-outline" onclick="exportPorLoja()">⬇ Excel por loja</button>
+      <button class="btn btn-outline" onclick="exportPorReferencia()">⬇ Excel por referência</button>
+      <button class="btn btn-outline" onclick="exportRuturas()">⬇ Excel ruturas</button>
+      <button class="btn btn-outline" onclick="exportComparacaoFisicoSistema()">⬇ Excel físico vs sistema</button>
+    </div>
   </div>
   <div class="card">
     <p style="font-weight:600;margin-bottom:8px">Evolução por loja (visitas recentes)</p>
@@ -376,7 +375,7 @@ function doLogin(){
   document.getElementById('app-header').style.display='flex';
   document.getElementById('main-tabs').style.display='flex';
   document.getElementById('user-label').textContent=recolhedor;
-  init();
+  init().then(()=>goTab('relatorios'));
 }
 
 async function apiGet(p){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{headers:HDR});if(!r.ok)throw new Error(await r.text());return r.json();}
@@ -659,8 +658,35 @@ async function eliminarRecolha(id){
   }catch(e){alert('Erro: '+e.message);}
 }
 
+async function loadStockSistemaMap(){
+  const stockSistema={};
+  try{
+    const rows=await apiGet('carrefour_stock_sistema?select=loja_codigo,produto_id,stock_sistema');
+    rows.forEach(r=>{(stockSistema[r.loja_codigo]=stockSistema[r.loja_codigo]||{})[r.produto_id]=r.stock_sistema;});
+  }catch(e){/* tabela pode não existir */}
+  return stockSistema;
+}
+
+function getCompareCell(rec,itensByRec,stockSistema,lojaCodigo,produtoId){
+  let sf=null,ss=null,ssFrom='';
+  if(rec){
+    const it=(itensByRec[rec.id]||[]).find(x=>x.produto_id===produtoId);
+    if(it){
+      if(it.stock_fisico!=null) sf=+it.stock_fisico;
+      if(it.stock_sistema!=null){ss=+it.stock_sistema;ssFrom='visita';}
+    }
+  }
+  if(ss==null&&stockSistema[lojaCodigo]?.[produtoId]!=null){
+    ss=+stockSistema[lojaCodigo][produtoId];
+    ssFrom='importado';
+  }
+  const dif=(sf!=null&&ss!=null)?sf-ss:null;
+  return{sf,ss,dif,ssFrom};
+}
+
 async function buildReportCache(force){
   if(reportCache&&!force) return reportCache;
+  const stockSistema=await loadStockSistemaMap();
   const recolhas=await apiGet('carrefour_recolhas?select=*&order=data_recolha.desc&limit=500');
   const latest={}, byLoja={};
   recolhas.forEach(r=>{
@@ -669,11 +695,11 @@ async function buildReportCache(force){
   });
   Object.keys(byLoja).forEach(c=>byLoja[c].sort((a,b)=>new Date(b.data_recolha)-new Date(a.data_recolha)));
   const allIds=[...new Set(recolhas.map(r=>r.id))];
-  if(!allIds.length){reportCache={latest:{},byLoja:{},itensByRec:{},lojas};return reportCache;}
+  if(!allIds.length){reportCache={latest:{},byLoja:{},itensByRec:{},stockSistema};return reportCache;}
   const itens=await apiGet('carrefour_recolha_itens?recolha_id=in.('+allIds.join(',')+')&select=*,carrefour_produtos(material,nome,ean,categoria,posicao)');
   const itensByRec={};
   itens.forEach(it=>{(itensByRec[it.recolha_id]=itensByRec[it.recolha_id]||[]).push(it);});
-  reportCache={latest,byLoja,itensByRec,lojas};
+  reportCache={latest,byLoja,itensByRec,stockSistema};
   return reportCache;
 }
 
@@ -685,26 +711,62 @@ function visitStats(recId,itensByRec){
   return{com:com.length,rut,pct:com.length?rut/com.length:0,total};
 }
 
-function renderMatrizStock(latest,itensByRec){
+function fmtCmpVal(v){return v!=null?v:'—';}
+function fmtCmpDiff(dif,sf){
+  if(dif==null) return '—';
+  if(dif===0) return '0';
+  return dif>0?'+'+dif:String(dif);
+}
+function cmpDiffClass(dif,sf){
+  if(sf!=null&&isRuptura(sf)) return 'diff-warn-cell';
+  if(dif==null) return 'cell-empty';
+  return dif===0?'diff-match':'diff-warn-cell';
+}
+
+function renderMatrizStock(latest,itensByRec,stockSistema){
   const codes=lojas.map(l=>l.codigo);
-  let h='<table class="prod-table rpt-table"><thead><tr><th class="sticky-col">Produto</th>';
-  codes.forEach(c=>{h+=`<th class="num">${c}</th>`;});
+  let h='<table class="prod-table rpt-table cmp-table"><thead>';
+  h+='<tr><th class="sticky-col" rowspan="2">Produto</th>';
+  codes.forEach(c=>{h+=`<th class="num loja-hdr" colspan="3">${c}</th>`;});
+  h+='</tr><tr>';
+  codes.forEach(()=>{h+='<th class="num sub-hdr">F</th><th class="num sub-hdr">S</th><th class="num sub-hdr">Δ</th>';});
   h+='</tr></thead><tbody>';
   produtos.forEach(p=>{
     h+=`<tr><td class="sticky-col" style="font-size:11px"><strong>${p.material}</strong> · ${p.nome}</td>`;
     codes.forEach(c=>{
       const rec=latest[c];
-      let sf='—',cls='cell-empty';
-      if(rec){
-        const it=(itensByRec[rec.id]||[]).find(x=>x.produto_id===p.id);
-        if(it&&it.stock_fisico!=null){sf=it.stock_fisico;cls=stockCellClass(sf);}
-      }
-      h+=`<td class="${cls}">${sf}</td>`;
+      const d=getCompareCell(rec,itensByRec,stockSistema,c,p.id);
+      const fCls=d.sf!=null?stockCellClass(d.sf):'cell-empty';
+      const sCls='cmp-s'+(d.ssFrom==='importado'?' importado':'')+(d.ss==null?' cell-empty':'');
+      const sTitle=d.ssFrom==='importado'?' title="Stock importado do portal (sem valor na visita)"':'';
+      h+=`<td class="num cmp-f ${fCls}">${fmtCmpVal(d.sf)}</td>`;
+      h+=`<td class="num ${sCls}"${sTitle}>${fmtCmpVal(d.ss)}</td>`;
+      h+=`<td class="num cmp-d ${cmpDiffClass(d.dif,d.sf)}">${fmtCmpDiff(d.dif,d.sf)}</td>`;
     });
     h+='</tr>';
   });
   h+='</tbody></table>';
   document.getElementById('matriz-stock').innerHTML=h;
+}
+
+function renderKpiDivergencia(latest,itensByRec,stockSistema){
+  const el=document.getElementById('kpi-divergencia');
+  const codes=lojas.map(l=>l.codigo);
+  const stats=codes.map(c=>{
+    const rec=latest[c];
+    let divergencias=0,comparaveis=0;
+    produtos.forEach(p=>{
+      const d=getCompareCell(rec,itensByRec,stockSistema,c,p.id);
+      if(d.sf!=null&&d.ss!=null){comparaveis++;if(d.dif!==0) divergencias++;}
+    });
+    return{codigo:c,divergencias,comparaveis,rec};
+  }).sort((a,b)=>b.divergencias-a.divergencias);
+  el.innerHTML=stats.map(s=>{
+    if(!s.rec) return `<div class="kpi"><strong>—</strong><span>${s.codigo} · sem visita</span></div>`;
+    const pct=s.comparaveis?fmtPct(s.divergencias/s.comparaveis):'—';
+    const cls=s.divergencias?'diff-warn':'diff-ok';
+    return `<div class="kpi"><strong class="${cls}">${s.divergencias}</strong><span>${s.codigo} · ${pct} diverg.</span></div>`;
+  }).join('');
 }
 
 function renderEvolucaoLojas(byLoja,itensByRec){
@@ -726,7 +788,7 @@ function renderEvolucaoLojas(byLoja,itensByRec){
 async function loadRelatorios(){
   try{
     reportCache=null;
-    const {latest,itensByRec,byLoja}=await buildReportCache(true);
+    const {latest,itensByRec,byLoja,stockSistema}=await buildReportCache(true);
     const kpi=document.getElementById('kpi-ruturas');
     const codes=lojas.map(l=>l.codigo);
     if(!codes.length){kpi.innerHTML='<p style="color:var(--muted)">Sem dados</p>';return;}
@@ -736,7 +798,8 @@ async function loadRelatorios(){
       const st=visitStats(rec.id,itensByRec);
       return `<div class="kpi"><strong>${st.com?fmtPct(st.pct):'—'}</strong><span>${c} · ${st.rut} ruturas</span></div>`;
     }).join('');
-    renderMatrizStock(latest,itensByRec);
+    renderKpiDivergencia(latest,itensByRec,stockSistema);
+    renderMatrizStock(latest,itensByRec,stockSistema);
     renderEvolucaoLojas(byLoja,itensByRec);
     const refMap={};
     produtos.forEach(p=>{
@@ -818,6 +881,34 @@ async function exportRuturas(){
     rows.push([l.nome,l.codigo,new Date(rec.data_recolha).toLocaleString('pt-PT'),rec.notas||'',com.length,rut,com.length?fmtPct(rut/com.length):'']);
   });
   downloadExcel('carrefour-ruturas-por-loja.xlsx',rows,'Ruturas');
+}
+
+async function exportComparacaoFisicoSistema(){
+  const {latest,itensByRec,stockSistema}=await buildReportCache();
+  const codes=lojas.map(l=>l.codigo);
+  const subHdr=codes.flatMap(c=>[c+' F',c+' S',c+' Δ']);
+  const rows=[['Material','Produto','EAN',...subHdr]];
+  produtos.forEach(p=>{
+    const row=[p.material,p.nome,p.ean||''];
+    codes.forEach(c=>{
+      const d=getCompareCell(latest[c],itensByRec,stockSistema,c,p.id);
+      row.push(d.sf??'',d.ss??'',d.dif??'');
+    });
+    rows.push(row);
+  });
+  const sumHdr=['Loja','Data última visita','Produtos comparáveis','Divergências','% divergência'];
+  rows.push([],sumHdr);
+  codes.forEach(c=>{
+    const rec=latest[c];
+    if(!rec){rows.push([c,'','','','']);return;}
+    let comparaveis=0,divergencias=0;
+    produtos.forEach(p=>{
+      const d=getCompareCell(rec,itensByRec,stockSistema,c,p.id);
+      if(d.sf!=null&&d.ss!=null){comparaveis++;if(d.dif!==0) divergencias++;}
+    });
+    rows.push([c,new Date(rec.data_recolha).toLocaleString('pt-PT'),comparaveis,divergencias,comparaveis?fmtPct(divergencias/comparaveis):'']);
+  });
+  downloadExcel('carrefour-fisico-vs-sistema.xlsx',rows,'Comparação');
 }
 
 async function apiUpsertStock(rows){
@@ -906,7 +997,7 @@ async function importarStockSistema(inp){
 function openModal(src){document.getElementById('modal-img').src=src;document.getElementById('modal').classList.add('open');}
 
 const saved=sessionStorage.getItem('carrefour_user');
-if(saved){recolhedor=saved;document.getElementById('login-screen').style.display='none';document.getElementById('app-header').style.display='flex';document.getElementById('main-tabs').style.display='flex';document.getElementById('user-label').textContent=saved;init();}
+if(saved){recolhedor=saved;document.getElementById('login-screen').style.display='none';document.getElementById('app-header').style.display='flex';document.getElementById('main-tabs').style.display='flex';document.getElementById('user-label').textContent=saved;init().then(()=>goTab('relatorios'));}
 </script>
 </body>
 </html>
