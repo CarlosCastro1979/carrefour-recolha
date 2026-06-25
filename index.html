@@ -288,6 +288,15 @@ function fmtDataValidade(v){
   return isNaN(d)?'':d.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 function parsePreco(v){if(v===''||v==null)return null;const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n;}
+function parseValidadeCurta(v){
+  if(!v||v==='')return null;
+  const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m?`${m[1]}-${m[2]}-${m[3]}`:null;
+}
+function msgErroValidadeCurtaTipo(err){
+  const msg=String(err?.message||err);
+  return msg.includes('22P02')||/validade_curta.*boolean|boolean.*validade_curta|invalid input syntax for type boolean/i.test(msg);
+}
 function precoStr(v){return v!=null&&!isNaN(v)?String(v).replace('.',','):'';}
 function fmtPrecoPair(de,por,leg){
   const p=por??leg,d=de;
@@ -567,12 +576,13 @@ async function guardarRecolha(){
     const itens=produtos.map(p=>{
       const e=entradas[p.id];
       return{
-        recolha_id:rec.id,produto_id:p.id,
+        recolha_id:rec.id,
+        produto_id:p.id,
         stock_fisico:+e.sf,
         stock_sistema:e.ss!==''?+e.ss:null,
         preco_de:parsePreco(e.pd),
         preco_por:parsePreco(e.pp),
-        validade_curta:e.vc||null
+        validade_curta:parseValidadeCurta(e.vc)
       };
     });
     await apiPost('carrefour_recolha_itens',itens);
@@ -586,7 +596,13 @@ async function guardarRecolha(){
     document.getElementById('view-ok').classList.add('active');
     document.getElementById('save-bar').style.display='none';
     document.body.classList.remove('has-bar');
-  }catch(e){alert('Erro: '+e.message);}
+  }catch(e){
+    if(msgErroValidadeCurtaTipo(e)){
+      alert('Executa supabase_migration_v5_validade_data.sql no Supabase (coluna validade_curta deve ser DATE, não boolean).');
+    }else{
+      alert('Erro: '+(e.message||e));
+    }
+  }
   btn.disabled=false;btn.textContent='💾 Guardar recolha';
 }
 
