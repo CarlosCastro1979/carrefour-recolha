@@ -79,6 +79,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .kpi span{font-size:11px;color:var(--muted)}
 .list-item.selected{background:var(--accent-soft)}
 .prod-table input{width:100%;min-width:52px;padding:8px 4px;border:1px solid var(--border);border-radius:6px;text-align:center;font-size:14px;margin:0}
+.prod-table input.readonly-ss{background:#f1f5f9;cursor:not-allowed;color:var(--muted)}
+.prod-table input.readonly-ss:focus{border-color:var(--border);box-shadow:none}
 .prod-table .cell-vc{text-align:center;padding:8px 4px}
 .prod-table .cell-vc input[type=date]{width:100%;min-width:120px;padding:8px 4px;border:1px solid var(--border);border-radius:6px;font-size:14px;margin:0}
 .prod-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -304,10 +306,13 @@ function dayBoundsFromLocalDatetime(dataStr){
   const end=new Date(d);end.setDate(end.getDate()+1);end.setHours(0,0,0,0);
   return{start:start.toISOString(),end:end.toISOString()};
 }
-async function buscarVisitaHojeLoja(lojaCodigo,dataStr){
+async function buscarVisitasHojeLoja(lojaCodigo,dataStr){
   const{start,end}=dayBoundsFromLocalDatetime(dataStr);
-  const q='carrefour_recolhas?loja_codigo=eq.'+lojaCodigo+'&data_recolha=gte.'+encodeURIComponent(start)+'&data_recolha=lt.'+encodeURIComponent(end)+'&select=id,data_recolha,recolhedor&limit=1';
-  const rows=await apiGet(q);
+  const q='carrefour_recolhas?loja_codigo=eq.'+lojaCodigo+'&data_recolha=gte.'+encodeURIComponent(start)+'&data_recolha=lt.'+encodeURIComponent(end)+'&select=id,data_recolha,recolhedor&order=data_recolha.desc';
+  return await apiGet(q);
+}
+async function buscarVisitaHojeLoja(lojaCodigo,dataStr){
+  const rows=await buscarVisitasHojeLoja(lojaCodigo,dataStr);
   return rows[0]||null;
 }
 function fmtHoraVisita(dataRecolha){
@@ -320,9 +325,10 @@ async function atualizarAvisoVisitaHoje(){
   const data=document.getElementById('f-data').value;
   if(!loja||!data){warn.style.display='none';return;}
   try{
-    const v=await buscarVisitaHojeLoja(loja,data);
-    if(v){
-      warn.textContent='⚠️ Já existe visita a esta loja hoje ('+v.recolhedor+', '+fmtHoraVisita(v.data_recolha)+'). Ao guardar, substituirá a visita anterior.';
+    const visitas=await buscarVisitasHojeLoja(loja,data);
+    if(visitas.length){
+      const extra=visitas.length>1?' ('+visitas.length+' visitas duplicadas)':'';
+      warn.textContent='⚠️ Já existe visita a esta loja hoje ('+visitas[0].recolhedor+', '+fmtHoraVisita(visitas[0].data_recolha)+')'+extra+'. Ao guardar, substituirá a(s) visita(s) anterior(es).';
       warn.style.display='block';
     }else warn.style.display='none';
   }catch(e){warn.style.display='none';}
@@ -569,8 +575,8 @@ function renderProdutos(){
   });
   let html='';
   if(precosHint)html+=`<p class="hint-bar">${precosHint}</p>`;
-  html+='<p style="font-size:12px;color:var(--muted);margin-bottom:8px"><strong>Obrigatório:</strong> stock na loja em todos os produtos (0 se rutura). Preços «De» / «Por» da última visita — actualiza se necessário.</p>';
-  html+='<table class="prod-table"><thead><tr><th>Produto</th><th class="num">Stock na loja *</th><th class="num">Stock no sistema</th><th class="num">De R$</th><th class="num">Por R$</th><th class="num">Validade +Curta</th></tr></thead><tbody>';
+  html+='<p style="font-size:12px;color:var(--muted);margin-bottom:8px"><strong>Obrigatório:</strong> stock na loja em todos os produtos (0 se rutura). Preços «De» / «Por» da última visita — actualiza se necessário. <strong>Stock no sistema</strong> é carregado automaticamente — não editável (importado na aba Sistema).</p>';
+  html+='<table class="prod-table"><thead><tr><th>Produto</th><th class="num">Stock na loja *</th><th class="num" title="Carregado pelo sistema — não editável">Stock no sistema</th><th class="num">De R$</th><th class="num">Por R$</th><th class="num">Validade +Curta</th></tr></thead><tbody>';
   cats.forEach(cat=>{
     const items=byCat[cat];
     html+=`<tr class="cat-row"><td colspan="6">${cat} (${items.length})</td></tr>`;
@@ -578,7 +584,7 @@ function renderProdutos(){
       const e=entradas[p.id]||emptyEntrada();
       html+=`<tr><td>${prodCell(p)}</td>
         <td><input type="number" min="0" inputmode="numeric" placeholder="0" value="${e.sf}" data-p="${p.id}" data-f="sf" oninput="setEntrada(this)" required></td>
-        <td><input type="number" min="0" inputmode="numeric" placeholder="—" value="${e.ss}" data-p="${p.id}" data-f="ss" oninput="setEntrada(this)"></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder="—" value="${e.ss}" data-p="${p.id}" data-f="ss" readonly class="readonly-ss" title="Carregado pelo sistema — não editável" tabindex="-1"></td>
         <td><input inputmode="decimal" placeholder="—" value="${e.pd}" data-p="${p.id}" data-f="pd" oninput="setEntrada(this)"></td>
         <td><input inputmode="decimal" placeholder="—" value="${e.pp}" data-p="${p.id}" data-f="pp" oninput="setEntrada(this)"></td>
         <td class="cell-vc"><input type="date" value="${e.vc}" data-p="${p.id}" data-f="vc" oninput="setEntrada(this)" aria-label="Validade +Curta"></td></tr>`;
@@ -588,7 +594,7 @@ function renderProdutos(){
   document.getElementById('prod-list').innerHTML=html;
 }
 
-function setEntrada(inp){entradas[inp.dataset.p][inp.dataset.f]=inp.value;}
+function setEntrada(inp){if(inp.dataset.f==='ss')return;entradas[inp.dataset.p][inp.dataset.f]=inp.value;}
 function onPhotos(inp){[...inp.files].forEach(f=>{const r=new FileReader();r.onload=e=>{fotosPendentes.push(e.target.result);renderThumbs();};r.readAsDataURL(f);});inp.value='';}
 function renderThumbs(){
   document.getElementById('f-thumbs').innerHTML=fotosPendentes.map((src,i)=>
@@ -607,10 +613,13 @@ async function guardarRecolha(){
     const loja=document.getElementById('f-loja').value;
     const data=document.getElementById('f-data').value;
     const notas=document.getElementById('f-notas').value.trim();
-    const existente=await buscarVisitaHojeLoja(loja,data);
-    if(existente){
-      if(!confirm('Já existe visita a esta loja hoje ('+existente.recolhedor+', '+fmtHoraVisita(existente.data_recolha)+'). Substituir?'))return;
-      await apiDelete('carrefour_recolhas?id=eq.'+existente.id);
+    const existentes=await buscarVisitasHojeLoja(loja,data);
+    if(existentes.length){
+      const msg=existentes.length===1
+        ?'Já existe visita a esta loja hoje ('+existentes[0].recolhedor+', '+fmtHoraVisita(existentes[0].data_recolha)+'). Substituir?'
+        :'Já existem '+existentes.length+' visitas a esta loja hoje. Substituir todas por esta?';
+      if(!confirm(msg))return;
+      for(const v of existentes) await apiDelete('carrefour_recolhas?id=eq.'+v.id);
     }
     const [rec]=await apiPost('carrefour_recolhas',{loja_codigo:loja,recolhedor,data_recolha:new Date(data).toISOString(),notas:notas||null});
     const itens=produtos.map(p=>{
