@@ -141,8 +141,9 @@ th,td{padding:8px;border-bottom:1px solid var(--border)}th{font-size:10px;text-t
     <div class="step" data-s="3">3. Fotos</div>
   </div>
   <div id="m-step1"><div class="card">
-    <label>Loja Carrefour</label><select id="f-loja" onchange="limparFotos();limparNotas()"></select>
-    <label>Data e hora da recolha</label><input type="datetime-local" id="f-data">
+    <label>Loja Carrefour</label><select id="f-loja" onchange="limparFotos();limparNotas();atualizarAvisoVisitaHoje()"></select>
+    <label>Data e hora da recolha</label><input type="datetime-local" id="f-data" onchange="atualizarAvisoVisitaHoje()">
+    <div id="loja-visita-hoje-warn" class="hint-bar" style="display:none;margin-top:-6px"></div>
     <button class="btn btn-primary" onclick="mobileStep(2)">Continuar →</button>
   </div></div>
   <div id="m-step2" style="display:none">
@@ -277,7 +278,7 @@ const LOJAS=[
   {codigo:'TTE',nome:'CRFO TATUAPE ANALIA FRANCO · TTE'}
 ];
 
-let lojas=[], produtos=[], entradas={}, fotosPendentes=[], mobileStepN=1, recolhedor='', selectedRecolhaId=null, reportCache=null, precosHint='';
+let lojas=[], produtos=[], entradas={}, fotosPendentes=[], mobileStepN=1, recolhedor='', selectedRecolhaId=null, reportCache=null, precosHint='', savingRecolha=false;
 
 function emptyEntrada(){return{sf:'',ss:'',pd:'',pp:'',vc:''};}
 function fmtDataValidade(v){
@@ -296,6 +297,35 @@ function parseValidadeCurta(v){
 function msgErroValidadeCurtaTipo(err){
   const msg=String(err?.message||err);
   return msg.includes('22P02')||/validade_curta.*boolean|boolean.*validade_curta|invalid input syntax for type boolean/i.test(msg);
+}
+function dayBoundsFromLocalDatetime(dataStr){
+  const d=new Date(dataStr);
+  const start=new Date(d);start.setHours(0,0,0,0);
+  const end=new Date(d);end.setDate(end.getDate()+1);end.setHours(0,0,0,0);
+  return{start:start.toISOString(),end:end.toISOString()};
+}
+async function buscarVisitaHojeLoja(lojaCodigo,dataStr){
+  const{start,end}=dayBoundsFromLocalDatetime(dataStr);
+  const q='carrefour_recolhas?loja_codigo=eq.'+lojaCodigo+'&data_recolha=gte.'+encodeURIComponent(start)+'&data_recolha=lt.'+encodeURIComponent(end)+'&select=id,data_recolha,recolhedor&limit=1';
+  const rows=await apiGet(q);
+  return rows[0]||null;
+}
+function fmtHoraVisita(dataRecolha){
+  return new Date(dataRecolha).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+}
+async function atualizarAvisoVisitaHoje(){
+  const warn=document.getElementById('loja-visita-hoje-warn');
+  if(!warn)return;
+  const loja=document.getElementById('f-loja').value;
+  const data=document.getElementById('f-data').value;
+  if(!loja||!data){warn.style.display='none';return;}
+  try{
+    const v=await buscarVisitaHojeLoja(loja,data);
+    if(v){
+      warn.textContent='⚠️ Já existe visita a esta loja hoje ('+v.recolhedor+', '+fmtHoraVisita(v.data_recolha)+'). Ao guardar, substituirá a visita anterior.';
+      warn.style.display='block';
+    }else warn.style.display='none';
+  }catch(e){warn.style.display='none';}
 }
 function precoStr(v){return v!=null&&!isNaN(v)?String(v).replace('.',','):'';}
 function fmtPrecoPair(de,por,leg){
@@ -523,6 +553,7 @@ async function init(){
   });
   produtos.forEach(p=>{entradas[p.id]=emptyEntrada();});
   renderProdutos();
+  atualizarAvisoVisitaHoje();
 }
 
 function renderProdutos(){
@@ -566,12 +597,21 @@ function renderThumbs(){
 }
 
 async function guardarRecolha(){
+  if(savingRecolha)return;
   if(!validarStockFisico())return;
-  const btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='A guardar...';
+  savingRecolha=true;
+  const btn=document.getElementById('btn-save');
+  btn.disabled=true;
+  btn.textContent='A guardar...';
   try{
     const loja=document.getElementById('f-loja').value;
     const data=document.getElementById('f-data').value;
     const notas=document.getElementById('f-notas').value.trim();
+    const existente=await buscarVisitaHojeLoja(loja,data);
+    if(existente){
+      if(!confirm('Já existe visita a esta loja hoje ('+existente.recolhedor+', '+fmtHoraVisita(existente.data_recolha)+'). Substituir?'))return;
+      await apiDelete('carrefour_recolhas?id=eq.'+existente.id);
+    }
     const [rec]=await apiPost('carrefour_recolhas',{loja_codigo:loja,recolhedor,data_recolha:new Date(data).toISOString(),notas:notas||null});
     const itens=produtos.map(p=>{
       const e=entradas[p.id];
@@ -602,8 +642,11 @@ async function guardarRecolha(){
     }else{
       alert('Erro: '+(e.message||e));
     }
+  }finally{
+    savingRecolha=false;
+    btn.disabled=false;
+    btn.textContent='💾 Guardar recolha';
   }
-  btn.disabled=false;btn.textContent='💾 Guardar recolha';
 }
 
 function novaRecolha(){
