@@ -1,7 +1,7 @@
 {
-  "name": "Carrefour Recolha — Delta Foods",
-  "short_name": "Carrefour",
-  "description": "Recolha de stock, preços e fotos — lojas Carrefour",
+  "name": "Delta Mobile Varejo",
+  "short_name": "Delta Varejo",
+  "description": "Recolha de stock, preços e relatórios — varejo Delta",
   "start_url": "/carrefour-recolha/",
   "scope": "/carrefour-recolha/",
   "display": "standalone",
